@@ -31,6 +31,9 @@ traps bots with a hidden field, and the form service adds its own spam filtering
 
 Until a key is set, the page says the form is being connected and does not send.
 
+> Testing note: Web3Forms rejects automated/headless browsers and server-side calls on the free plan (HTTP 403, no CORS
+> headers). The automated test therefore mocks the service. To test for real, submit the live form from a normal browser.
+
 ## Security
 
 Strict CSP (no inline scripts or styles, `connect-src` limited to the form service), clickjacking and sniffing protection,
