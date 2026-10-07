@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { PROVIDERS } from '@orbit/search'
 import { PRESETS } from '@orbit/themes'
 import type { PermissionKey, PermissionValue, Settings as S, SearchProviderId } from '@orbit/types'
 import { act, kbdLabel, useOrbit } from '../state'
-import { Page, Row, Toggle } from './shared'
+import { EmbedContext, Page, Row, Toggle } from './shared'
+import { PasswordsSection, PaymentsSection } from './Vault'
+
+const HistoryPage = lazy(() => import('./History'))
+const DownloadsPage = lazy(() => import('./Downloads'))
+const PinsPage = lazy(() => import('./Pins'))
 
 const SECTIONS = [
   'General',
@@ -14,19 +19,31 @@ const SECTIONS = [
   'Tabs',
   'Privacy',
   'Site Permissions',
+  'Passwords',
+  'Payment methods',
   'Downloads',
+  'History',
+  'Pins & Bookmarks',
   'Keyboard',
   'Profiles',
   'Extensions',
   'About X Orbit',
 ] as const
 type Sec = (typeof SECTIONS)[number]
+const keyOf = (x: string) => x.toLowerCase().replace(/[^a-z]/g, '')
 const SLUG: Record<string, Sec> = {
   privacy: 'Privacy',
   search: 'Search',
   about: 'About X Orbit',
   spaces: 'Spaces',
   appearance: 'Appearance',
+  general: 'General',
+  passwords: 'Passwords',
+  payments: 'Payment methods',
+  themes: 'Themes',
+  downloads: 'Downloads',
+  history: 'History',
+  pins: 'Pins & Bookmarks',
 }
 
 const SHORTCUTS: [string, string][] = [
@@ -61,8 +78,17 @@ const PERMS: [PermissionKey, string][] = [
 export default function Settings() {
   const s = useOrbit()!
   const set = s.settings
-  const initial = SLUG[new URLSearchParams(location.search).get('s') ?? ''] ?? 'General'
-  const [sec, setSec] = useState<Sec>(initial)
+  const bySlug = (k: string): Sec | undefined => SLUG[k] ?? SECTIONS.find((x) => keyOf(x) === k)
+  const fromUrl = (): Sec =>
+    bySlug(location.hash.slice(1)) ??
+    bySlug(new URLSearchParams(location.search).get('s') ?? '') ??
+    'General'
+  const [sec, setSec] = useState<Sec>(fromUrl)
+  useEffect(() => {
+    const on = () => setSec(fromUrl())
+    window.addEventListener('hashchange', on)
+    return () => window.removeEventListener('hashchange', on)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [msg, setMsg] = useState('')
   const put = <K extends keyof S>(key: K | string, value: unknown) =>
     act('setSetting', { key, value })
@@ -424,12 +450,29 @@ export default function Settings() {
             label="Ask where to save"
           />
         </Row>
-        <p>
-          <button className="btn ghost" onClick={() => act('openInternal', { page: 'downloads' })}>
-            Open downloads
-          </button>
-        </p>
+        <div className="orbit-label sub">YOUR DOWNLOADS</div>
+        <EmbedContext.Provider value>
+          <Suspense fallback={null}>
+            <DownloadsPage />
+          </Suspense>
+        </EmbedContext.Provider>
       </>
+    ),
+    History: (
+      <EmbedContext.Provider value>
+        <Suspense fallback={null}>
+          <HistoryPage />
+        </Suspense>
+      </EmbedContext.Provider>
+    ),
+    Passwords: <PasswordsSection />,
+    'Payment methods': <PaymentsSection />,
+    'Pins & Bookmarks': (
+      <EmbedContext.Provider value>
+        <Suspense fallback={null}>
+          <PinsPage />
+        </Suspense>
+      </EmbedContext.Provider>
     ),
     Keyboard: (
       <table className="kbd-table">
@@ -515,6 +558,7 @@ export default function Settings() {
               aria-current={x === sec}
               onClick={() => {
                 setSec(x)
+                history.replaceState(null, '', `#${keyOf(x)}`)
                 setMsg('')
               }}
             >

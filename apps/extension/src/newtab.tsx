@@ -34,6 +34,73 @@ async function loadBookmarks(): Promise<Bm[]> {
   return out
 }
 
+function AddTile({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
+  const [err, setErr] = useState('')
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    let u: URL
+    try {
+      u = new URL(/^https?:\/\//i.test(url.trim()) ? url.trim() : 'https://' + url.trim())
+    } catch {
+      return setErr('That doesn’t look like a web address')
+    }
+    if (!/^https?:$/.test(u.protocol) || (!u.hostname.includes('.') && u.hostname !== 'localhost'))
+      return setErr('That doesn’t look like a web address')
+    await chrome.bookmarks.create({
+      parentId: '1',
+      title: title.trim() || hostOf(u.href),
+      url: u.href,
+    }) // Bookmarks bar
+    setOpen(false)
+    setUrl('')
+    setTitle('')
+    setErr('')
+    onAdded()
+  }
+  if (!open)
+    return (
+      <button className="bm-tile bm-add" onClick={() => setOpen(true)} aria-label="Add bookmark">
+        <span className="bm-ico">+</span>
+        <span className="bm-title">Add bookmark</span>
+      </button>
+    )
+  return (
+    <form className="bm-tile bm-form" onSubmit={submit}>
+      <input
+        autoFocus
+        className="field"
+        placeholder="Web address"
+        aria-label="Web address"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+      />
+      <input
+        className="field"
+        placeholder="Name (optional)"
+        aria-label="Name"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      {err && (
+        <span className="orbit-label" role="alert">
+          {err}
+        </span>
+      )}
+      <span className="bm-form-btns">
+        <button type="submit" className="btn ghost">
+          Add
+        </button>
+        <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </span>
+    </form>
+  )
+}
+
 function NewTab() {
   const prefs = usePrefs()
   const pins = useStored(getPins, [])
@@ -126,24 +193,26 @@ function NewTab() {
           )}
         </div>
 
-        {bms.length > 0 ? (
+        {
           <section className="bm" aria-label="Bookmarks">
-            <div className="bm-head">
-              <div className="bm-chips" role="group" aria-label="Bookmark folders">
-                {folders.map((f) => (
-                  <button
-                    key={f}
-                    aria-pressed={folder === f}
-                    onClick={() => {
-                      setFolder(f)
-                      setAll(false)
-                    }}
-                  >
-                    {f}
-                  </button>
-                ))}
+            {bms.length > 0 && (
+              <div className="bm-head">
+                <div className="bm-chips" role="group" aria-label="Bookmark folders">
+                  {folders.map((f) => (
+                    <button
+                      key={f}
+                      aria-pressed={folder === f}
+                      onClick={() => {
+                        setFolder(f)
+                        setAll(false)
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             <div className="bm-grid">
               {shown.map((b) => (
                 <div className="bm-tile" key={b.id}>
@@ -178,16 +247,20 @@ function NewTab() {
                   </button>
                 </div>
               ))}
+              <AddTile onAdded={refresh} />
             </div>
             {list.length > SHOWN && (
               <button className="bm-more orbit-label" onClick={() => setAll(!all)}>
                 {all ? 'SHOW LESS' : `SHOW ALL ${list.length}`}
               </button>
             )}
+            {bms.length === 0 && (
+              <p className="orbit-label bm-empty">
+                Bookmarks you save in Chrome appear here, or add one with +
+              </p>
+            )}
           </section>
-        ) : (
-          <p className="orbit-label bm-empty">Bookmarks you save in Chrome appear here</p>
-        )}
+        }
 
         {bms.length === 0 && recent.length > 0 && (
           <div className="nt-recent">

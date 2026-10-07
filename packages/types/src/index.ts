@@ -99,6 +99,7 @@ export interface Settings {
   autoplay: boolean
   permissionDefaults: Record<PermissionKey, PermissionValue>
   askDownload: boolean
+  offerToSavePasswords: boolean
   autoUpdate: boolean
   channel: 'stable' | 'beta' | 'developer'
 }

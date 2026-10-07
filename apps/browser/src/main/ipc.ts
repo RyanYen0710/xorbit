@@ -20,6 +20,9 @@ import {
   suggest,
 } from './commands'
 import { sessionFor } from './session'
+import { isBrowser, readBookmarks } from './bookmarks'
+import * as vault from './vault'
+import { copySecret } from './autofill'
 
 const str = (v: unknown, max = 2000): string => (typeof v === 'string' && v.length <= max ? v : '')
 const bool = (v: unknown) => typeof v === 'boolean'
@@ -51,6 +54,7 @@ const SETTING_RULES: { [K in keyof Settings]?: (v: unknown) => boolean } = {
   popups: oneOf('allow', 'block'),
   autoplay: bool,
   askDownload: bool,
+  offerToSavePasswords: bool,
   autoUpdate: bool,
   channel: oneOf('stable', 'beta', 'developer'),
   onboarded: bool,
@@ -59,7 +63,7 @@ const PERM_KEYS: PermissionKey[] = ['camera', 'microphone', 'geolocation', 'noti
 const PERM_VALUES = ['allow', 'block', 'ask']
 
 /** Only the main frame of a view we created, showing an orbit:// page, may talk to us. */
-function trust(e: IpcMainInvokeEvent): OrbitWindow {
+function trust(e: Pick<IpcMainInvokeEvent, 'sender' | 'senderFrame'>): OrbitWindow {
   const f = e.senderFrame
   const w = byContents.get(e.sender.id)
   if (!w || !f || f.parent || !f.url.startsWith('orbit://')) throw new Error('untrusted IPC sender')
@@ -142,6 +146,132 @@ const ACT: Record<string, Handler> = {
   },
   deleteSpace: (_w, p) => deleteSpace(str(p.id)),
   pinPage: (w, p) => pinPage(w, str(p.id) || undefined),
+  addBookmark: (w, p) => {
+    let u: URL
+    try {
+      u = new URL(
+        /^https?:\/\//i.test(str(p.url, 2000)) ? str(p.url, 2000) : 'https://' + str(p.url, 2000),
+      )
+    } catch {
+      return 'That doesn’t look like a web address'
+    }
+    if (!/^https?:$/.test(u.protocol) || (!u.hostname.includes('.') && u.hostname !== 'localhost'))
+      return 'That doesn’t look like a web address'
+    if (db.data.pins.some((x) => x.url === u.href && x.spaceId === w.activeSpaceId))
+      return 'Already bookmarked'
+    db.data.pins.push({
+      id: uid(),
+      spaceId: w.activeSpaceId,
+      title: str(p.title, 200) || u.host.replace(/^www\./, ''),
+      url: u.href,
+      favicon: '',
+      folder: '',
+      favorite: false,
+    })
+    db.save()
+    broadcast()
+    return 'Added'
+  },
+  importBookmarks: (w, p) => {
+    const id = str(p.browser, 10)
+    if (!isBrowser(id)) return 'Unknown browser'
+    const r = readBookmarks(id)
+    if (!r) return `Couldn’t find ${id[0].toUpperCase() + id.slice(1)} bookmarks on this computer`
+    const have = new Set(
+      db.data.pins.filter((x) => x.spaceId === w.activeSpaceId).map((x) => x.url),
+    )
+    let n = 0
+    for (const b of r.items) {
+      if (have.has(b.url)) continue
+      have.add(b.url)
+      db.data.pins.push({
+        id: uid(),
+        spaceId: w.activeSpaceId,
+        title: b.title,
+        url: b.url,
+        favicon: '',
+        folder: b.folder,
+        favorite: false,
+      })
+      n++
+    }
+    db.save()
+    broadcast()
+    return n
+      ? `Imported ${n} bookmark${n === 1 ? '' : 's'} from ${r.label}`
+      : `No new bookmarks in ${r.label}`
+  },
+  // ── saved passwords & cards (encrypted vault; see vault.ts) ──
+  vaultAddLogin: (_w, p) => {
+    try {
+      const u = new URL(
+        /^https?:\/\//i.test(str(p.url, 2000)) ? str(p.url, 2000) : 'https://' + str(p.url, 2000),
+      )
+      const ok =
+        u.protocol === 'https:' ||
+        (u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname))
+      if (!ok || (!u.hostname.includes('.') && u.hostname !== 'localhost'))
+        return 'Enter a secure (https) site address'
+      const password = str(p.password, 1024)
+      if (!password) return 'Enter a password'
+      vault.upsertLogin(u.origin, str(p.username, 320), password)
+      return 'Saved'
+    } catch (e) {
+      return (e as Error).message || 'Could not save'
+    }
+  },
+  vaultDeleteLogin: (_w, p) => {
+    try {
+      vault.deleteLogin(str(p.id))
+    } catch {
+      /* vault unavailable */
+    }
+  },
+  vaultReveal: async (_w, p) => {
+    try {
+      const l = vault.getLogin(str(p.id))
+      return l && (await vault.authorize('show a saved password')) ? l.password : ''
+    } catch {
+      return ''
+    }
+  },
+  vaultCopy: async (_w, p) => {
+    try {
+      const l = vault.getLogin(str(p.id))
+      if (!l || !(await vault.authorize('copy a saved password'))) return 'Cancelled'
+      copySecret(l.password)
+      return 'Copied. The clipboard is cleared in 30 seconds.'
+    } catch {
+      return 'Could not copy'
+    }
+  },
+  vaultAddCard: (_w, p) => {
+    try {
+      const err = vault.addCard(
+        str(p.name, 80),
+        str(p.number, 40),
+        Number(p.expMonth),
+        Number(p.expYear),
+      )
+      return err || 'Added'
+    } catch (e) {
+      return (e as Error).message
+    }
+  },
+  vaultDeleteCard: (_w, p) => {
+    try {
+      vault.deleteCard(str(p.id))
+    } catch {
+      /* vault unavailable */
+    }
+  },
+  vaultNeverRemove: (_w, p) => {
+    try {
+      vault.setNever(str(p.origin, 300), false)
+    } catch {
+      /* vault unavailable */
+    }
+  },
   favoritePin: (_w, p) => {
     const x = db.data.pins.find((y) => y.id === p.id)
     if (!x) return
@@ -331,6 +461,20 @@ const QUERY: Record<string, (w: OrbitWindow, p: Payload) => unknown> = {
     ),
   suggest: (w, p) => suggest(w, str(p.text, 300)),
   commands: (w, p) => paletteItems(w, str(p.text, 100)),
+  vaultStatus: () => {
+    const pr = vault.protection()
+    return {
+      ok: pr.ok,
+      backend: pr.backend,
+      auth: vault.authLevel(),
+      never: pr.ok ? vault.neverList() : [],
+    }
+  },
+  vaultLogins: () =>
+    vault.protection().ok
+      ? vault.listLogins().sort((a, b) => a.origin.localeCompare(b.origin))
+      : [],
+  vaultCards: () => (vault.protection().ok ? vault.listCards() : []),
   site: async (w, p): Promise<SiteInfo | null> => {
     const t = w.tab(str(p.tabId)) ?? w.activeTab
     if (!t) return null
@@ -359,6 +503,14 @@ const QUERY: Record<string, (w: OrbitWindow, p: Payload) => unknown> = {
 
 export function initIpc() {
   ipcMain.handle('state', (e) => trust(e).state())
+  // Built-in pages ask once, synchronously, at document start so they paint with the right theme on the first frame.
+  ipcMain.on('state:sync', (e) => {
+    try {
+      e.returnValue = trust(e).state()
+    } catch {
+      e.returnValue = null
+    }
+  })
   ipcMain.handle('act', async (e, type: unknown, payload: unknown) => {
     const w = trust(e)
     const h = typeof type === 'string' && Object.hasOwn(ACT, type) ? ACT[type] : null

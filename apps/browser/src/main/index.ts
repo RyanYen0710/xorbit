@@ -9,11 +9,15 @@ import { initIpc } from './ipc'
 import { buildMenu } from './menu'
 import { initUpdater } from './updater'
 import { resolveInput } from '@orbit/search'
+import { initAutofill, fillLogin, fillCard } from './autofill'
+import * as vault from './vault'
 
 app.setName('X Orbit')
 if (process.env.ORBIT_USER_DATA) app.setPath('userData', process.env.ORBIT_USER_DATA)
 if (process.env.ORBIT_DOWNLOADS) app.setPath('downloads', process.env.ORBIT_DOWNLOADS)
 registerScheme()
+// Tests must never touch the real OS keychain (it would pop a permission dialog).
+if (process.env.ORBIT_TEST) app.commandLine.appendSwitch('use-mock-keychain')
 
 if (!app.requestSingleInstanceLock() && !process.env.ORBIT_USER_DATA) app.quit()
 
@@ -53,6 +57,7 @@ void app.whenReady().then(() => {
   setupSession(mainSession())
   buildMenu()
   initIpc()
+  initAutofill()
   initUpdater()
   new OrbitWindow()
   setInterval(() => windows.forEach((w) => w.sweep()), 60_000)
@@ -60,7 +65,18 @@ void app.whenReady().then(() => {
     if (!windows.size) new OrbitWindow()
   })
   if (process.env.ORBIT_TEST)
-    (globalThis as any).__orbit = { windows, db, history, byContents, OrbitWindow, app, electron }
+    (globalThis as any).__orbit = {
+      windows,
+      db,
+      history,
+      byContents,
+      OrbitWindow,
+      app,
+      electron,
+      vault,
+      fillLogin,
+      fillCard,
+    }
 })
 
 app.on('before-quit', () => {

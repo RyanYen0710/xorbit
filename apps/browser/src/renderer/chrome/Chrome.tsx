@@ -99,6 +99,18 @@ function TabRow({ t, active, expanded }: { t: TabInfo; active: boolean; expanded
           </button>
         </>
       )}
+      {!expanded && (
+        <button
+          className="tab-close-mini"
+          aria-label={`Close ${title}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            void act('closeTab', { id: t.id })
+          }}
+        >
+          <Icon n="close" size={10} />
+        </button>
+      )}
     </div>
   )
 }
@@ -204,7 +216,7 @@ function Rail({ s }: { s: UIState }) {
   const older = tabs.filter((t) => !today.includes(t))
   const pins = s.pins.filter((p) => p.spaceId === s.activeSpaceId && p.favorite !== false)
   const dl = s.downloads.filter((d) => d.state === 'progressing').length
-  const nav = (page: string) => act('openInternal', { page })
+  const nav = (section: string) => act('openInternal', { page: 'settings', section })
 
   return (
     <nav
@@ -312,7 +324,7 @@ function Rail({ s }: { s: UIState }) {
           className="icon-btn"
           aria-label="Settings"
           title="Settings"
-          onClick={() => nav('settings')}
+          onClick={() => nav('general')}
         >
           <Icon n="settings" />
         </button>
@@ -320,7 +332,7 @@ function Rail({ s }: { s: UIState }) {
           className="icon-btn"
           aria-label="Profile"
           title="Profile"
-          onClick={() => nav('settings')}
+          onClick={() => nav('general')}
         >
           <Icon n={s.private ? 'private' : 'user'} />
         </button>

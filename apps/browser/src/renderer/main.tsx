@@ -33,9 +33,10 @@ function App() {
 }
 
 document.documentElement.dataset.route = location.hostname
-initState()
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+void initState().then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  ),
 )

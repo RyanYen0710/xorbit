@@ -77,7 +77,7 @@ export class OrbitWindow {
   activeSpaceId: string
   split: { a: string; b: string; ratio: number } | null = null
   closed: { url: string; title: string; spaceId: string }[] = []
-  railExpanded = false
+  railExpanded = true
   focus = false
   peek = false
   overlayMode: OverlayMode = 'compact'
@@ -204,7 +204,7 @@ export class OrbitWindow {
           url: t.url,
           title: t.title,
           favicon: t.favicon,
-          loading: t.loading,
+          loading: t.loading && !isInternalUrl(t.url), // built-in pages load locally; a spinner would only flicker
           audible: t.audible,
           muted: t.muted,
           canGoBack: nav?.canGoBack() ?? false,
@@ -593,11 +593,18 @@ export class OrbitWindow {
     if (t) this.activate(t.id)
   }
   openInternal(page: string, section?: string) {
-    const url = `orbit://${page}${section ? `?s=${section}` : ''}`
-    const t = this.tabs.find((x) => pageOf(x.url) === page)
+    // Open in the tab you're on (Back returns to your page) instead of piling up new tabs.
+    // Only the #fragment changes when you're already on that page, so it's an in-page navigation:
+    // nothing reloads and nothing flashes.
+    const url = `orbit://${page}${section ? `#${section}` : ''}`
+    const t = this.activeTab
     if (!t) return void this.newTab({ url })
-    if (section) this.navigate(t, url)
-    this.activate(t.id)
+    if (pageOf(t.url) === page && t.view && !t.url.includes('?')) {
+      t.url = url
+      void t.view.webContents.loadURL(url).catch(() => {})
+      return this.changed()
+    }
+    this.navigate(t, url)
   }
 
   // ── views ─────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   appearance: 'theme',
   archiveAfterHours: 24,
   railPosition: 'left',
-  railWidth: 264,
+  railWidth: 236,
   animations: true,
   compact: false,
   orbitBar: true,
@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
     notifications: 'ask',
   },
   askDownload: false,
+  offerToSavePasswords: true,
   autoUpdate: true,
   channel: 'beta',
 }

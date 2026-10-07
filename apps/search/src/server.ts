@@ -7,9 +7,26 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { buildSearchUrl, createProvider } from '@orbit/search'
 import { page } from './page'
+import { createLimiter } from './limit'
 
 const port = Number(process.env.ORBIT_SEARCH_PORT ?? 4400)
 const provider = createProvider(process.env)
+// A free API key is a small pool (e.g. Serper's 2,500 queries): spend it slowly unless you set your own limits.
+const limiter = createLimiter({
+  perMinute: Number(process.env.SEARCH_LIMIT_PER_MINUTE ?? 20),
+  perDay: Number(process.env.SEARCH_LIMIT_PER_DAY ?? 50),
+  globalPerDay: Number(process.env.SEARCH_LIMIT_GLOBAL_PER_DAY ?? 200),
+})
+// Only trust X-Forwarded-For when you run behind your own proxy (set TRUST_PROXY=1); otherwise it can be spoofed.
+const visitorOf = (rq: http.IncomingMessage) =>
+  (process.env.TRUST_PROXY === '1'
+    ? String(rq.headers['x-forwarded-for'] ?? '')
+        .split(',')
+        .pop()
+        ?.trim()
+    : '') ||
+  rq.socket.remoteAddress ||
+  'unknown'
 const req = createRequire(import.meta.url)
 const fontFile = (pkg: string, file: string) =>
   path.join(path.dirname(req.resolve(`${pkg}/package.json`)), 'files', file)
@@ -26,6 +43,9 @@ const googleCfg = (q: string) =>
 
 const server = http.createServer(async (rq, rs) => {
   const url = new URL(rq.url ?? '/', 'http://localhost')
+  rs.setHeader('X-Content-Type-Options', 'nosniff')
+  rs.setHeader('Referrer-Policy', 'no-referrer')
+  rs.setHeader('X-Frame-Options', 'DENY')
   const json = (code: number, body: unknown) => {
     rs.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' })
     rs.end(JSON.stringify(body))
@@ -58,6 +78,15 @@ const server = http.createServer(async (rq, rs) => {
         })
       }
       const page = Math.max(1, Math.min(10, Number(url.searchParams.get('page')) || 1))
+      const verdict = limiter.check(visitorOf(rq))
+      if (!verdict.ok) {
+        // Over the limit: never spend API quota — send the visitor to Google's own results instead.
+        rs.setHeader('Retry-After', String(verdict.retryAfter))
+        return json(200, {
+          redirect: googleCfg(q) + (kind === 'news' ? '&tbm=nws' : ''),
+          reason: `rate limited (${verdict.reason})`,
+        })
+      }
       try {
         return json(200, await provider.search(q, { kind, page }))
       } catch (e) {

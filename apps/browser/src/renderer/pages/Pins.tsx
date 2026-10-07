@@ -19,6 +19,15 @@ export default function Pins() {
         <button className="btn ghost" onClick={async () => setMsg(await act('importPins'))}>
           Import JSON
         </button>
+        {(['chrome', 'edge', 'brave'] as const).map((b) => (
+          <button
+            key={b}
+            className="btn ghost"
+            onClick={async () => setMsg(await act('importBookmarks', { browser: b }))}
+          >
+            Import from {b[0].toUpperCase() + b.slice(1)}
+          </button>
+        ))}
         {msg && <span className="orbit-label">{msg}</span>}
       </div>
       {s.pins.length === 0 && (

@@ -2,11 +2,12 @@
 import { chromium } from 'playwright-core'
 import http from 'node:http'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-ext-'))
+// scratch files stay inside the project (git-ignored), not in the system temp folder
+const mkTmp = () => (fs.mkdirSync('.tmp', { recursive: true }), path.resolve('.tmp'))
+const tmp = fs.mkdtempSync(path.join(mkTmp(), 'orbit-ext-'))
 // Test copy of dist with host access to 127.0.0.1, standing in for the user gesture that grants activeTab.
 const ext = path.join(tmp, 'ext')
 fs.cpSync('dist', ext, { recursive: true })
@@ -82,12 +83,22 @@ try {
   const nt2 = await ctx.newPage()
   await nt2.goto('chrome://newtab')
   await nt2.waitForSelector('.bm-tile')
-  assert.equal(await nt2.locator('.bm-tile').count(), 2)
+  assert.equal(await nt2.locator('.bm-tile:not(.bm-add)').count(), 2)
   assert.equal(await nt2.locator('.bm-chips button').count(), 3) // All + two Chrome folders
   await nt2.locator('.bm-chips button', { hasText: 'Other bookmarks' }).click()
-  assert.equal(await nt2.locator('.bm-tile').count(), 1)
+  assert.equal(await nt2.locator('.bm-tile:not(.bm-add)').count(), 1)
   await nt2.locator('.bm-chips button', { hasText: 'All' }).click()
   log('new tab shows the Chrome bookmarks as a grid with folder filters')
+  await nt2.locator('.bm-add').click()
+  await nt2.fill('.bm-form input[aria-label="Web address"]', 'example.net/added')
+  await nt2.fill('.bm-form input[aria-label="Name"]', 'Added here')
+  await nt2.locator('.bm-form button[type="submit"]').click()
+  await nt2.locator('.bm-tile', { hasText: 'Added here' }).waitFor()
+  const created = await sw.evaluate(async () =>
+    (await chrome.bookmarks.search({ title: 'Added here' })).map((b) => b.url),
+  )
+  assert.deepEqual(created, ['https://example.net/added'])
+  log('the + tile adds a real Chrome bookmark')
   await nt2.locator('.bm-tile', { hasText: 'Orbit Docs' }).hover()
   await nt2.locator('.bm-tile', { hasText: 'Orbit Docs' }).locator('.bm-pin').click()
   await nt2.waitForSelector('.bm-pin[aria-pressed="true"]')

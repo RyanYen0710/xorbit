@@ -1,13 +1,14 @@
 // Captures real screenshots of the running browser for docs / the website. Usage: node scripts/shots.mjs <outDir>
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import http from 'node:http'
 import { launch, until } from './harness.mjs'
 
 const out = path.resolve(process.argv[2] ?? 'shots')
 fs.mkdirSync(out, { recursive: true })
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-shots-'))
+// scratch files stay inside the project (git-ignored), not in the system temp folder
+const mkTmp = () => (fs.mkdirSync('.tmp', { recursive: true }), path.resolve('.tmp'))
+const tmp = fs.mkdtempSync(path.join(mkTmp(), 'orbit-shots-'))
 
 const PAGES = {
   '/': ['Flight notes', 'Notes', 'Ascent profile, margins, open questions.'],
@@ -56,6 +57,7 @@ try {
   await app.act('finishOnboarding')
   await until(async () => (await app.tab()).url === 'orbit://newtab', 'newtab')
   const newtabId = (await app.state()).activeTabId
+  await shot('newtab-empty')
   for (const p of ['/', '/docs', '/mail', '/code', '/video']) {
     await app.act('newTab', { url: base + p })
     await until(
@@ -74,7 +76,6 @@ try {
   })
   await until(async () => (await app.tab()).title.startsWith('Reference'), 'title')
   await app.act('pinPage')
-  await app.act('toggleRail')
   await shot('mission-control')
   await app.act('overlay', { mode: 'bar', text: 'starship' })
   await shot('orbit-bar')
@@ -88,7 +89,7 @@ try {
   await app.act('openInternal', { page: 'themes' })
   await shot('theme-studio')
   await app.act('setTheme', { id: 'mars' })
-  await app.act('openInternal', { page: 'settings' })
+  await app.act('openInternal', { page: 'settings', section: 'downloads' })
   await shot('settings-mars')
   await app.act('setTheme', { id: 'lunar' })
   await app.act('openInternal', { page: 'newtab' })

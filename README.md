@@ -58,6 +58,8 @@ It launches the real app and verifies: onboarding, loading a page, search throug
 | Theme Studio (6 presets, custom, live preview, export/import JSON), appearance modes                                 | ✅                                                              |
 | History, downloads manager (pause/resume/cancel/retry), pins with folders + JSON import/export                       | ✅                                                              |
 | Privacy: third-party cookie blocking, JS switch, per-site permissions (prompt + panel), clear data, popups, autoplay | ✅                                                              |
+| Saved passwords + payment cards (encrypted with the OS keychain, local only, fill on click, no CVV stored)           | ✅ desktop app                                                  |
+| Passkeys                                                                                                             | ❌ needs code signing first                                     |
 | Session restore (tabs, Spaces, active tab, window bounds), first-run onboarding, custom error page                   | ✅                                                              |
 | Packaging (dmg/zip/NSIS/AppImage/deb configs), GitHub Releases auto-update, CI + release workflows                   | ✅ configured; mac arm64 package verified                       |
 | Website with download-page OS detection and real release lookup                                                      | ✅                                                              |
@@ -86,6 +88,8 @@ The same ideas as an extension people install from the Chrome Web Store instead 
 - **Shared design language**: `packages/ui/src/orbit.css` defines the `--orbit-*` tokens used by the browser, the website and Orbit Search; `packages/themes` swaps their values at runtime.
 
 ### Security decisions
+
+Full notes, including what applies once accounts/payments exist: [docs/security.md](docs/security.md). Reporting: [SECURITY.md](SECURITY.md).
 
 - Every tab and shell view: `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`. The preload exposes `window.orbit` **only** on `orbit://` pages; the main process re-validates every IPC call (sender must be a view we created, a main frame, showing an `orbit://` URL) and rejects anything off an explicit allow-list of actions, with per-action input checks. The smoke test asserts web pages have no `window.orbit`.
 - Web pages cannot navigate to `orbit://`; `javascript:`/`data:` are never loaded from the Bar; external protocols other than `mailto:`/`tel:` are dropped; `<webview>` is disabled.

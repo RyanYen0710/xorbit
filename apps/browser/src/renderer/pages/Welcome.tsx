@@ -8,6 +8,7 @@ const LOOKS = PRESETS.slice(0, 4)
 export default function Welcome() {
   const s = useOrbit()!
   const [step, setStep] = useState(0)
+  const [imported, setImported] = useState('')
   useEffect(() => {
     document.title = 'Welcome'
   }, [])
@@ -97,11 +98,29 @@ export default function Welcome() {
         <section>
           <h1 className="orbit-display">IMPORT</h1>
           <p>
-            Importing bookmarks from Chrome, Edge and Brave isn’t available in this version yet.
+            Bring your bookmarks with you. This reads the bookmarks file of that browser on this
+            computer, only when you click.
           </p>
-          <p className="dim">You can export and import Pins as JSON from the Pins page.</p>
+          <div className="toolbar">
+            {(['chrome', 'edge', 'brave'] as const).map((b) => (
+              <button
+                key={b}
+                className="btn ghost"
+                onClick={async () =>
+                  setImported((await act('importBookmarks', { browser: b })) as string)
+                }
+              >
+                Import from {b[0].toUpperCase() + b.slice(1)}
+              </button>
+            ))}
+          </div>
+          {imported && (
+            <p className="dim" role="status">
+              {imported}
+            </p>
+          )}
           <button className="btn" onClick={next}>
-            SKIP FOR NOW
+            {imported.startsWith('Imported') ? 'CONTINUE' : 'SKIP FOR NOW'}
           </button>
         </section>
       )}

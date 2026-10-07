@@ -24,7 +24,7 @@ export function pageOf(u: string): string | null {
   }
 }
 /** orbit://settings/ → orbit://settings (Chromium appends the root slash). */
-export const canon = (u: string) => u.replace(/^(orbit:\/\/[\w-]+)\/(?=$|\?)/, '$1')
+export const canon = (u: string) => u.replace(/^(orbit:\/\/[\w-]+)\/(?=$|[?#])/, '$1')
 export const isTabPage = (u: string) => TAB_PAGES.includes(pageOf(u) ?? '')
 
 /** Must run before app 'ready'. */

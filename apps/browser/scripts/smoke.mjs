@@ -2,13 +2,38 @@
 // Uses a local HTTP server so it needs no network. Launches Electron through playwright-core.
 import http from 'node:http'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-smoke-'))
+// scratch files stay inside the project (git-ignored), not in the system temp folder
+const mkTmp = () => (fs.mkdirSync('.tmp', { recursive: true }), path.resolve('.tmp'))
+const tmp = fs.mkdtempSync(path.join(mkTmp(), 'orbit-smoke-'))
 const dl = path.join(tmp, 'downloads')
 fs.mkdirSync(dl)
+// A Chrome-format bookmarks file for the import test (the app only reads it because ORBIT_TEST is set).
+const bm = path.join(tmp, 'Bookmarks')
+fs.writeFileSync(
+  bm,
+  JSON.stringify({
+    roots: {
+      bookmark_bar: {
+        name: 'Bookmarks bar',
+        type: 'folder',
+        children: [
+          { type: 'url', name: 'Alpha', url: 'https://alpha.example/' },
+          {
+            type: 'folder',
+            name: 'Sub',
+            children: [{ type: 'url', name: 'Beta', url: 'https://beta.example/x' }],
+          },
+          { type: 'url', name: 'Evil', url: 'javascript:alert(1)' },
+        ],
+      },
+      other: { name: 'Other bookmarks', type: 'folder', children: [] },
+    },
+  }),
+)
+process.env.ORBIT_BOOKMARKS_FILE = bm
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x')
@@ -18,6 +43,14 @@ const server = http.createServer((req, res) => {
       'content-disposition': 'attachment; filename="orbit-test.bin"',
     })
     return res.end(Buffer.alloc(200_000, 7))
+  }
+  if (u.pathname === '/login' || u.pathname === '/pay') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+    return res.end(
+      u.pathname === '/login'
+        ? `<!doctype html><title>Login</title><form id="f" action="/x" method="post"><input id="u" type="text" name="u"><input id="p" type="password" name="p"><button>Go</button></form><script>f.addEventListener('submit',e=>e.preventDefault())</script>`
+        : `<!doctype html><title>Pay</title><form id="f" action="/x" method="post"><input id="cn" autocomplete="cc-name"><input id="num" autocomplete="cc-number"><input id="exp" autocomplete="cc-exp"><input id="csc" autocomplete="cc-csc"><button>Pay</button></form><script>f.addEventListener('submit',e=>e.preventDefault())</script>`,
+    )
   }
   res.writeHead(200, { 'content-type': 'text/html' })
   res.end(
@@ -150,13 +183,174 @@ try {
   assert.ok(hist.some((u) => u.endsWith('/a')) && hist.some((u) => u.endsWith('/b')))
   log(`history recorded ${hist.length} visits`)
 
+  const tabsBefore = (await state()).tabs.length
   await act('openInternal', { page: 'settings' })
   await until(async () => (await tabInfo()).title === 'Settings', 'settings page')
+  assert.equal((await state()).tabs.length, tabsBefore) // opened in place, no new tab
   const h = await W(
     `return w.activeTab.view.webContents.executeJavaScript("document.querySelector('.sec-title')?.textContent")`,
   )
   assert.equal(h, 'General')
-  log('Settings opens')
+  log('Settings opens in the current tab (no new tab)')
+  for (const [section, title] of [
+    ['downloads', 'Downloads'],
+    ['history', 'History'],
+    ['pins', 'Pins & Bookmarks'],
+  ]) {
+    await act('openInternal', { page: 'settings', section })
+    await until(
+      () =>
+        W(
+          `return w.activeTab.view.webContents.executeJavaScript("document.querySelector('.sec-title')?.textContent")`,
+        ).then((t) => t === title),
+      `settings section ${title}`,
+    )
+  }
+  assert.equal((await state()).tabs.length, tabsBefore)
+  log('Downloads, History and Pins are sections inside Settings (still no new tabs)')
+
+  // switching sections must be an in-page change: same document (a marker survives), no loading state, no reload
+  const secTitle = () =>
+    W(
+      `return w.activeTab.view.webContents.executeJavaScript("document.querySelector('.sec-title')?.textContent")`,
+    )
+  await W(`return w.activeTab.view.webContents.executeJavaScript("window.__keep = 42")`)
+  for (const [section, title] of [
+    ['history', 'History'],
+    ['pins', 'Pins & Bookmarks'],
+    ['downloads', 'Downloads'],
+    ['privacy', 'Privacy'],
+  ]) {
+    await act('openInternal', { page: 'settings', section })
+    await until(() => secTitle().then((t) => t === title), `in-page switch to ${title}`)
+    assert.equal(
+      await W(`return w.activeTab.view.webContents.executeJavaScript("window.__keep")`),
+      42,
+    )
+    const st = await state()
+    assert.equal(st.tabs.find((t) => t.id === st.activeTabId).loading, false) // built-in pages never show a spinner
+  }
+  log('switching Downloads / History / Pins / Privacy is an in-page change: no reload, so no flash')
+  const pinsBefore = (await state()).pins.length
+  assert.match(
+    await act('importBookmarks', { browser: 'chrome' }),
+    /Imported 2 bookmarks from Chrome/,
+  )
+  assert.match(await act('importBookmarks', { browser: 'chrome' }), /No new bookmarks/)
+  assert.equal((await state()).pins.length, pinsBefore + 2) // javascript: bookmark skipped
+  assert.equal(await act('addBookmark', { url: 'example.com/page', title: 'Ex' }), 'Added')
+  assert.equal(await act('addBookmark', { url: 'example.com/page' }), 'Already bookmarked')
+  assert.match(await act('addBookmark', { url: 'javascript:alert(1)' }), /doesn.t look like/)
+  assert.ok((await state()).pins.every((p) => /^https?:/.test(p.url)))
+  log(
+    'bookmarks: import from a browser file (unsafe URLs skipped), add by address, duplicates refused',
+  )
+
+  // ── password + card vault ──
+  const page = (js) => W(`return w.activeTab.view.webContents.executeJavaScript(arg)`, js)
+  const goTo = async (url, title) => {
+    await act('navigate', { url })
+    await until(
+      async () => (await tabInfo()).title === title && !(await tabInfo()).loading,
+      'load ' + title,
+    )
+  }
+  assert.equal(await W('return o.vault.protection().ok'), true)
+  await goTo(base + '/login', 'Login')
+  await page(`u.value='ryan@example.com'; p.value='correct horse battery'; f.requestSubmit()`)
+  await until(
+    () => W(`return o.vault.loginsFor(arg).length === 1`, base),
+    'login saved after submit',
+  )
+  const saved = await W(`return o.vault.loginsFor(arg)[0]`, base)
+  assert.equal(saved.username, 'ryan@example.com')
+  assert.equal(await W(`return o.vault.getLogin(arg).password`, saved.id), 'correct horse battery')
+  const vaultBytes = fs.readFileSync(path.join(tmp, 'user', 'vault.bin'))
+  assert.ok(
+    !vaultBytes.includes('correct horse') &&
+      !vaultBytes.includes('ryan@example.com') &&
+      !vaultBytes.includes('127.0.0.1'),
+  )
+  log(
+    'submitting a login form saves it; the vault file on disk contains no readable site, username or password',
+  )
+
+  await goTo(base + '/login', 'Login')
+  await W(`delete globalThis.__orbitMenu; return 1`)
+  await page(`u.focus(); u.blur()`)
+  await new Promise((r) => setTimeout(r, 700))
+  assert.equal(await W(`return !!globalThis.__orbitMenu`), false) // scripted focus is ignored
+  // a genuine mouse click into the box (script-driven focus is deliberately ignored by the page script)
+  const r = JSON.parse(await page(`JSON.stringify(u.getBoundingClientRect())`))
+  await W(
+    `const wc = w.activeTab.view.webContents; wc.focus(); const x = Math.round(arg.x + arg.width / 2), y = Math.round(arg.y + arg.height / 2);
+     wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 }); wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 }); return 1`,
+    r,
+  )
+  await until(() => W(`return !!globalThis.__orbitMenu`), 'fill menu requested')
+  assert.deepEqual((await W(`return globalThis.__orbitMenu`)).labels.slice(0, 1), [
+    'ryan@example.com',
+  ])
+  assert.equal(await W(`return o.fillLogin(w.activeTab.view.webContents, arg)`, saved.id), true)
+  await until(async () => (await page(`p.value`)) === 'correct horse battery', 'password filled')
+  assert.equal(await page(`u.value`), 'ryan@example.com')
+  log('focusing the username box offers the saved login; choosing it fills username and password')
+
+  await goTo(base.replace('127.0.0.1', 'localhost') + '/login', 'Login')
+  assert.equal(await W(`return o.fillLogin(w.activeTab.view.webContents, arg)`, saved.id), false) // different origin → refused
+  assert.equal(await page(`p.value`), '')
+  log('a saved login is refused on any other origin')
+
+  await W(
+    `const p = new o.OrbitWindow({ private: true }); globalThis.__p2 = p; return 1`,
+  )
+  await until(() => W(`return globalThis.__p2.tabs.length > 0`), 'private tab 2')
+  await W(`globalThis.__p2.navigate(globalThis.__p2.activeTab, arg); return 1`, base + '/login')
+  await until(() => W(`return globalThis.__p2.activeTab.title === 'Login'`), 'private login page')
+  await W(
+    `return globalThis.__p2.activeTab.view.webContents.executeJavaScript("u.value='priv@example.com'; p.value='secret-private'; f.requestSubmit()")`,
+  )
+  await new Promise((r) => setTimeout(r, 1500))
+  assert.equal(await W(`return o.vault.loginsFor(arg).length`, base), 1) // nothing new saved from the private window
+  await W(`globalThis.__p2.win.close(); return 1`)
+  log('private windows never offer to save passwords')
+
+  assert.match(
+    await W(`return o.vault.addCard('Ryan', '1234 5678 9012 3456', 4, 2030)`),
+    /isn.t valid/,
+  )
+  assert.equal(await W(`return o.vault.addCard('Ryan Y', '4242 4242 4242 4242', 4, 2030)`), '')
+  const card = (await W(`return o.vault.listCards()`))[0]
+  assert.deepEqual([card.brand, card.last4], ['Visa', '4242'])
+  assert.ok(!('number' in card))
+  await goTo(base + '/pay', 'Pay')
+  await W(`return o.fillCard(w.activeTab.view.webContents, arg)`, card.id)
+  await until(async () => (await page(`num.value`)) === '4242424242424242', 'card filled')
+  assert.equal(await page(`exp.value`), '04/30')
+  assert.equal(await page(`csc.value`), '') // the security code is never filled or stored
+  await page(
+    `cn.value='New Person'; num.value='5555 5555 5555 4444'; exp.value='11/29'; csc.value='123'; f.requestSubmit()`,
+  )
+  await until(() => W(`return o.vault.listCards().length === 2`), 'second card saved after submit')
+  const raw = await W(`return JSON.stringify(o.vault.getCard(o.vault.listCards()[1].id))`)
+  assert.ok(!raw.includes('123"') && !/csc|cvv|cvc/i.test(raw))
+  const vault2 = fs.readFileSync(path.join(tmp, 'user', 'vault.bin'))
+  assert.ok(!vault2.includes('4242424242424242') && !vault2.includes('5555555555554444'))
+  log(
+    'cards: Luhn check, masked list, fill without security code, saved on submit, encrypted at rest',
+  )
+
+  await act('openInternal', { page: 'settings', section: 'passwords' })
+  await until(
+    () =>
+      W(
+        `return w.activeTab.view.webContents.executeJavaScript("document.querySelector('.vrow .vsite')?.textContent")`,
+      ).then((t) => t === '127.0.0.1:' + new URL(base).port),
+    'passwords list in settings',
+  )
+  log('Settings → Passwords lists saved logins')
+  assert.equal((await state()).railExpanded, true)
+  log('sidebar shows tab names by default')
 
   await act('splitTab')
   s = await state()
@@ -190,6 +384,7 @@ try {
 
   const sessionTabs = (await state()).tabs.length
   const activeSpace = (await state()).activeSpaceId
+  const pinCountAtQuit = (await state()).pins.length
   await app.quit()
   app = await launch()
   await until(async () => (await state()).tabs.length > 0, 'restored tabs')
@@ -197,7 +392,7 @@ try {
   assert.equal(s.tabs.length, sessionTabs)
   assert.equal(s.activeSpaceId, activeSpace)
   assert.equal(s.settings.themeId, 'mars')
-  assert.equal(s.pins.length, 1)
+  assert.equal(s.pins.length, pinCountAtQuit)
   assert.equal(s.spaces.length, 2)
   log(
     `session restored (${s.tabs.length} tabs, Space ${s.spaces.find((x) => x.id === s.activeSpaceId).name}, theme mars)`,

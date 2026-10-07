@@ -1,10 +1,11 @@
 // Screenshot of the extension's new tab page with sample bookmarks → apps/website/public/shots/ext-newtab.png
 import { chromium } from 'playwright-core'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-ext-shot-'))
+// scratch files stay inside the project (git-ignored), not in the system temp folder
+const mkTmp = () => (fs.mkdirSync('.tmp', { recursive: true }), path.resolve('.tmp'))
+const tmp = fs.mkdtempSync(path.join(mkTmp(), 'orbit-ext-shot-'))
 const ctx = await chromium.launchPersistentContext(path.join(tmp, 'p'), {
   channel: 'chromium',
   headless: true,

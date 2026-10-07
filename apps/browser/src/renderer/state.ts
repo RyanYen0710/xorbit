@@ -20,8 +20,8 @@ function set(s: UIState) {
 }
 
 export function initState() {
-  void window.orbit.getState().then(set)
   window.orbit.onState(set)
+  return window.orbit.getState().then(set)
 }
 export const useOrbit = () =>
   useSyncExternalStore(

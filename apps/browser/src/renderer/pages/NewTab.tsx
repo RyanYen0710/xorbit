@@ -3,7 +3,7 @@ import { Logo } from '@orbit/ui'
 import { PROVIDERS } from '@orbit/search'
 import { act, hostOf, useOrbit } from '../state'
 
-const SHOWN = 18
+const SHOWN = 17 // + the Add tile = one tidy block
 
 function Fav({ url, src }: { url: string; src: string }) {
   const [bad, setBad] = useState(false)
@@ -14,21 +14,75 @@ function Fav({ url, src }: { url: string; src: string }) {
   )
 }
 
+function AddTile() {
+  const [open, setOpen] = useState(false)
+  const [url, setUrl] = useState('')
+  const [title, setTitle] = useState('')
+  const [msg, setMsg] = useState('')
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const r = (await act('addBookmark', { url, title })) as string
+    if (r === 'Added') {
+      setOpen(false)
+      setUrl('')
+      setTitle('')
+      setMsg('')
+    } else setMsg(r)
+  }
+  if (!open)
+    return (
+      <button className="bm-tile bm-add" onClick={() => setOpen(true)} aria-label="Add bookmark">
+        <span className="bm-ico">+</span>
+        <span className="bm-title">Add bookmark</span>
+      </button>
+    )
+  return (
+    <form className="bm-tile bm-form" onSubmit={submit}>
+      <input
+        autoFocus
+        className="field"
+        placeholder="Web address"
+        aria-label="Web address"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+      />
+      <input
+        className="field"
+        placeholder="Name (optional)"
+        aria-label="Name"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      {msg && (
+        <span className="orbit-label" role="alert">
+          {msg}
+        </span>
+      )}
+      <span className="bm-form-btns">
+        <button type="submit" className="btn ghost">
+          Add
+        </button>
+        <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </span>
+    </form>
+  )
+}
+
 export default function NewTab() {
   const s = useOrbit()!
   const [q, setQ] = useState('')
   const [all, setAll] = useState(false)
+  const [msg, setMsg] = useState('')
   useEffect(() => {
     document.title = 'New Tab'
   }, [])
   const bookmarks = s.pins.filter((p) => p.spaceId === s.activeSpaceId)
   const shown = all ? bookmarks : bookmarks.slice(0, SHOWN)
-  const recent = s.tabs
-    .filter((t) => !t.url.startsWith('orbit://') && t.spaceId === s.activeSpaceId)
-    .sort((a, b) => b.lastActive - a.lastActive)
-    .slice(0, 4)
   const space = s.spaces.find((x) => x.id === s.activeSpaceId)
   const provider = s.settings.searchProvider
+  const mod = s.platform === 'darwin' ? '⌘' : 'Ctrl+'
   return (
     <main className="newtab">
       <div className="horizon" aria-hidden="true" />
@@ -77,81 +131,79 @@ export default function NewTab() {
           {space && <span className="orbit-label">&nbsp;·&nbsp; SPACE / {space.name}</span>}
         </div>
 
-        {bookmarks.length > 0 ? (
-          <section className="bm" aria-label="Bookmarks">
-            <div className="bm-grid">
-              {shown.map((p) => {
-                const fav = p.favorite !== false
-                return (
-                  <div className="bm-tile" key={p.id}>
-                    <a
-                      href="#"
-                      title={p.url}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        void act('navigate', { url: p.url })
-                      }}
+        <section className="bm" aria-label="Bookmarks">
+          <div className="bm-grid">
+            {shown.map((p) => {
+              const fav = p.favorite !== false
+              return (
+                <div className="bm-tile" key={p.id}>
+                  <a
+                    href="#"
+                    title={p.url}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      void act('navigate', { url: p.url })
+                    }}
+                  >
+                    <span className="bm-ico">
+                      <Fav url={p.url} src={p.favicon} />
+                    </span>
+                    <span className="bm-title">{p.title}</span>
+                  </a>
+                  <button
+                    className="bm-pin"
+                    aria-pressed={fav}
+                    aria-label={
+                      fav ? `Unpin ${p.title} from the sidebar` : `Pin ${p.title} to the sidebar`
+                    }
+                    title={fav ? 'Pinned to the sidebar' : 'Pin to the sidebar'}
+                    onClick={() => act('favoritePin', { id: p.id })}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill={fav ? 'currentColor' : 'none'}
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
                     >
-                      <span className="bm-ico">
-                        <Fav url={p.url} src={p.favicon} />
-                      </span>
-                      <span className="bm-title">{p.title}</span>
-                    </a>
-                    <button
-                      className="bm-pin"
-                      aria-pressed={fav}
-                      aria-label={
-                        fav ? `Unpin ${p.title} from the sidebar` : `Pin ${p.title} to the sidebar`
-                      }
-                      title={fav ? 'Pinned to the sidebar' : 'Pin to the sidebar'}
-                      onClick={() => act('favoritePin', { id: p.id })}
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill={fav ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M7 4h10v16l-5-4-5 4z" />
-                      </svg>
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-            {bookmarks.length > SHOWN && (
-              <button className="bm-more orbit-label" onClick={() => setAll(!all)}>
-                {all ? 'SHOW LESS' : `SHOW ALL ${bookmarks.length}`}
-              </button>
-            )}
-          </section>
-        ) : (
-          <p className="orbit-label bm-empty">
-            Press {s.platform === 'darwin' ? '⌘' : 'Ctrl+'}D to pin a page ·{' '}
-            {s.platform === 'darwin' ? '⌘⇧' : 'Ctrl+Shift+'}D to bookmark it
-          </p>
-        )}
-
-        {bookmarks.length === 0 && recent.length > 0 && (
-          <div className="nt-recent">
-            <div className="orbit-label">RECENT TABS</div>
-            {recent.map((t) => (
-              <a
-                key={t.id}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  void act('activateTab', { id: t.id })
-                }}
-              >
-                {t.title || hostOf(t.url)} <span>{hostOf(t.url)}</span>
-              </a>
-            ))}
+                      <path d="M7 4h10v16l-5-4-5 4z" />
+                    </svg>
+                  </button>
+                </div>
+              )
+            })}
+            <AddTile />
           </div>
-        )}
+          {bookmarks.length > SHOWN && (
+            <button className="bm-more orbit-label" onClick={() => setAll(!all)}>
+              {all ? 'SHOW LESS' : `SHOW ALL ${bookmarks.length}`}
+            </button>
+          )}
+          {bookmarks.length === 0 && (
+            <div className="bm-import">
+              <span className="orbit-label">IMPORT BOOKMARKS FROM</span>
+              {(['chrome', 'edge', 'brave'] as const).map((b) => (
+                <button
+                  key={b}
+                  className="btn ghost"
+                  onClick={async () =>
+                    setMsg((await act('importBookmarks', { browser: b })) as string)
+                  }
+                >
+                  {b[0].toUpperCase() + b.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          {(msg || bookmarks.length === 0) && (
+            <p className="orbit-label bm-empty" role="status">
+              {msg ||
+                `Or open a page and press ${mod}D to pin it · ${s.platform === 'darwin' ? '⌘⇧' : 'Ctrl+Shift+'}D to bookmark it`}
+            </p>
+          )}
+        </section>
       </div>
     </main>
   )

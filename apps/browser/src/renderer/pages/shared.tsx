@@ -1,5 +1,8 @@
-import { useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { Logo } from '@orbit/ui'
+
+/** Pages rendered inside Settings skip their own header and title. */
+export const EmbedContext = createContext(false)
 
 export function Page({
   index,
@@ -14,9 +17,11 @@ export function Page({
   children: ReactNode
   wide?: boolean
 }) {
+  const embedded = useContext(EmbedContext)
   useEffect(() => {
-    document.title = title
-  }, [title])
+    if (!embedded) document.title = title
+  }, [title, embedded])
+  if (embedded) return <div className="embedded">{children}</div>
   return (
     <div className="page" data-wide={wide}>
       <header className="page-head">
