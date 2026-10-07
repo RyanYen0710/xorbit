@@ -5,7 +5,7 @@
   "description": "X Orbit Support Center: accounts + tickets (static site, Firebase Auth + Firestore). Tooling lives in dev/.",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "test": "cd dev && node run-emulators.mjs rules && node run-emulators.mjs app",
+    "test": "cd dev && node run-emulators.mjs rules && node run-emulators.mjs app && node run-emulators.mjs reviews",
     "build:vendor": "cd dev && node build-vendor.mjs"
   }
 }

@@ -5,6 +5,14 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.2',
+    channel: 'Beta',
+    items: [
+      'X Orbit now uses its own dialogs and menus instead of system ones: confirmations, camera / microphone / location prompts, save-password and save-card prompts, and right-click menus.',
+      'Reviews on the website: rate X Orbit with stars and a short note.',
+    ],
+  },
+  {
     v: '0.1.1',
     channel: 'Beta',
     items: [

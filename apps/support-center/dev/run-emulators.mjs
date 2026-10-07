@@ -11,9 +11,11 @@ if (!fs.existsSync(path.join(javaHome, 'bin/java'))) {
   console.error(`Java not found at ${javaHome}. See README (Testing) to download it into .tools/.`)
   process.exit(1)
 }
-const script = { rules: 'rules.test.mjs', app: 'app.e2e.mjs' }[process.argv[2]]
+const script = { rules: 'rules.test.mjs', app: 'app.e2e.mjs', reviews: 'reviews.e2e.mjs' }[
+  process.argv[2]
+]
 if (!script) {
-  console.error('usage: node run-emulators.mjs rules|app')
+  console.error('usage: node run-emulators.mjs rules|app|reviews')
   process.exit(1)
 }
 

@@ -370,6 +370,81 @@ await test('an unrelated collection is closed to everyone', async () => {
   await assertFails(getDoc(doc(google('boss'), 'secrets', 'x')))
 })
 
+// ── public reviews ───────────────────────────────────────────────────────────
+const review = (o = {}) => ({
+  rating: 5,
+  text: 'Fast and clean.',
+  name: 'Pat',
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
+  ...o,
+})
+const seedReview = (uid, o = {}) =>
+  seed((db) =>
+    setDoc(doc(db, 'reviews', uid), {
+      rating: 4,
+      text: 'ok',
+      name: 'Old',
+      createdAt: Timestamp.fromMillis(Date.now() - 60000),
+      updatedAt: Timestamp.fromMillis(Date.now() - 60000),
+      ...o,
+    }),
+  )
+await test('reviews: anyone (even signed out) can read the list and one review', async () => {
+  await seedReview('alice')
+  await assertSucceeds(getDocs(collection(anon(), 'reviews')))
+  await assertSucceeds(getDoc(doc(anon(), 'reviews', 'alice')))
+})
+await test('reviews: a verified person posts their own, but nobody else, and not signed out or unverified', async () => {
+  await assertSucceeds(setDoc(doc(pwd('alice'), 'reviews', 'alice'), review()))
+  await env.clearFirestore()
+  await assertFails(setDoc(doc(pwd('mallory'), 'reviews', 'alice'), review()))
+  await assertFails(setDoc(doc(anon(), 'reviews', 'x'), review()))
+  await assertFails(setDoc(doc(unverified('bob'), 'reviews', 'bob'), review()))
+  await assertSucceeds(setDoc(doc(google('carol'), 'reviews', 'carol'), review()))
+})
+await test('reviews: rating must be a whole number 1 to 5; text <= 500; name 1..30; no extra fields', async () => {
+  const db = pwd('alice')
+  const r = (o) => setDoc(doc(db, 'reviews', 'alice'), review(o))
+  await assertFails(r({ rating: 0 }))
+  await assertFails(r({ rating: 6 }))
+  await assertFails(r({ rating: 3.5 }))
+  await assertFails(r({ rating: '5' }))
+  await assertFails(r({ text: 'x'.repeat(501) }))
+  await assertSucceeds(r({ text: 'x'.repeat(500) }))
+  await env.clearFirestore()
+  await assertFails(r({ name: '' }))
+  await assertFails(r({ name: 'n'.repeat(31) }))
+  await assertFails(r({ uid: 'alice' }))
+  await assertFails(r({ createdAt: Timestamp.fromMillis(1) }))
+  await assertFails(r({ updatedAt: Timestamp.fromMillis(1) }))
+  await assertSucceeds(r({ text: '' }))
+})
+await test('reviews: owner can edit (keeps the original date) but not too fast; others cannot', async () => {
+  await seedReview('alice')
+  const db = pwd('alice')
+  const ref = doc(db, 'reviews', 'alice')
+  await assertFails(setDoc(doc(pwd('mallory'), 'reviews', 'alice'), review()))
+  await assertFails(
+    updateDoc(doc(pwd('mallory'), 'reviews', 'alice'), { rating: 1, updatedAt: serverTimestamp() }),
+  )
+  await assertFails(
+    updateDoc(ref, { rating: 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+  ) // date change
+  await assertSucceeds(updateDoc(ref, { rating: 2, text: 'meh', updatedAt: serverTimestamp() }))
+  await assertFails(updateDoc(ref, { rating: 3, updatedAt: serverTimestamp() })) // again within 10 s
+})
+await test('reviews: the owner or an administrator can delete; strangers and non-admin Google users cannot', async () => {
+  await seedReview('alice')
+  await assertFails(deleteDoc(doc(pwd('mallory'), 'reviews', 'alice')))
+  await assertFails(deleteDoc(doc(anon(), 'reviews', 'alice')))
+  await assertFails(deleteDoc(doc(google('nobody'), 'reviews', 'alice')))
+  await makeAdmin('boss')
+  await assertSucceeds(deleteDoc(doc(google('boss'), 'reviews', 'alice')))
+  await seedReview('bob')
+  await assertSucceeds(deleteDoc(doc(pwd('bob'), 'reviews', 'bob')))
+})
+
 await env.cleanup()
 console.log(`\n${n} passed, ${failed} failed`)
 process.exit(failed ? 1 : 0)

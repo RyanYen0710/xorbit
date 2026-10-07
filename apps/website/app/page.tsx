@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLink, Section, Shot } from '@/components/Shell'
+import { Reviews } from '@/components/Reviews'
 import { ThemeGrid } from '@/components/ThemeGrid'
 import { CHANNEL, VERSION } from '@/lib/site'
 
@@ -37,6 +38,21 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <Section
+        n="★"
+        label="REVIEWS"
+        id="reviews"
+        title={
+          <>
+            WHAT PEOPLE
+            <br />
+            SAY.
+          </>
+        }
+      >
+        <Reviews />
+      </Section>
 
       <Section
         n="01"

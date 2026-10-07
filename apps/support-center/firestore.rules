@@ -7,6 +7,7 @@ rules_version = '2';
 //   users/{uid}                  rate-limit marker: when this person last opened a ticket.
 //   tickets/{XO-yymmdd-XXXX}     one support ticket (owner = the person who opened it).
 //   tickets/{id}/messages/{id}   the conversation on a ticket (immutable once written).
+//   reviews/{uid}                one public star rating + short text per person, written only by its owner.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -24,6 +25,27 @@ service cloud.firestore {
     }
 
     function text(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+
+    // Public reviews on the website: anyone can read, one per verified account, written only by its owner.
+    match /reviews/{uid} {
+      function validReview(d) {
+        return d.keys().hasOnly(['rating', 'text', 'name', 'createdAt', 'updatedAt'])
+          && d.rating is int && d.rating >= 1 && d.rating <= 5
+          && text(d.text, 0, 500)
+          && text(d.name, 1, 30)
+          && d.updatedAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if verified() && request.auth.uid == uid
+        && validReview(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      // Edits: same author, original date kept, at most one every 10 seconds (server clock).
+      allow update: if verified() && request.auth.uid == uid
+        && validReview(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && resource.data.updatedAt < request.time - duration.value(10, 's');
+      allow delete: if (verified() && request.auth.uid == uid) || isAdmin();
+    }
 
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;   // lets the app know "am I an admin?"; reveals nothing else
