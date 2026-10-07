@@ -22,6 +22,9 @@ try {
     sent.push(JSON.parse(r.request().postData()))
     r.fulfill({ json: { success: true } })
   })
+  const noKey = (r) =>
+    r.fulfill({ contentType: 'text/javascript', body: "window.XORBIT_SUPPORT={accessKey:''}" })
+  await page.route('**/config.js', noKey)
   await page.goto(base)
   assert.match(await page.locator('#banner').innerText(), /being connected|not connected/i)
   await fillValid(page)
@@ -31,6 +34,7 @@ try {
   log('without an access key the form explains it and sends nothing')
 
   // 2) configured (key injected the way config.js would set it)
+  await page.unroute('**/config.js', noKey)
   await page.route('**/config.js', (r) =>
     r.fulfill({
       contentType: 'text/javascript',
