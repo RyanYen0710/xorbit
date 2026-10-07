@@ -33,7 +33,16 @@ module.exports = {
       NSLocationUsageDescription: 'Websites you allow can use your location.',
     },
   },
-  dmg: { title: 'X Orbit ${version}' },
+  // Drag-to-Applications window: open the .dmg, drag X Orbit onto Applications, eject.
+  dmg: {
+    title: 'X Orbit ${version}',
+    iconSize: 96,
+    window: { width: 540, height: 380 },
+    contents: [
+      { x: 140, y: 190, type: 'file' },
+      { x: 400, y: 190, type: 'link', path: '/Applications' },
+    ],
+  },
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],
     ...(process.env.WIN_PUBLISHER ? { publisherName: [process.env.WIN_PUBLISHER] } : {}),

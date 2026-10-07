@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater'
 import { db } from './store'
 import { broadcast } from './registry'
 
+const SITE = process.env.ORBIT_SITE_URL ?? 'https://xorbit-browse.vercel.app'
 // Updates come from GitHub Releases (see electron-builder.config.cjs). Unpackaged dev builds never check.
 let status = app.isPackaged ? 'idle' : 'dev build — updates disabled'
 const set = (s: string) => {
@@ -20,7 +21,11 @@ export function initUpdater() {
   autoUpdater.allowPrerelease = s.channel !== 'stable'
   autoUpdater.on('checking-for-update', () => set('checking…'))
   autoUpdater.on('update-available', (i) =>
-    set(`update ${i.version} available${autoUpdater.autoDownload ? ' — downloading' : ''}`),
+    set(
+      autoUpdater.autoDownload
+        ? `update ${i.version} available — downloading`
+        : `update ${i.version} available — download it from ${SITE}/download`,
+    ),
   )
   autoUpdater.on('update-not-available', () => set('up to date'))
   autoUpdater.on('update-downloaded', (i) => set(`update ${i.version} ready — restart to install`))

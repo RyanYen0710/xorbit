@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   askDownload: false,
   offerToSavePasswords: true,
-  autoUpdate: true,
+  autoUpdate: false, // unsigned macOS builds can't self-install; turn on once the app is signed
   channel: 'beta',
 }
 

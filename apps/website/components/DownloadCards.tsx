@@ -18,10 +18,21 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
     const ua = navigator.userAgent
     setOs(/Mac/i.test(ua) ? 'mac' : /Win/i.test(ua) ? 'win' : 'other')
   }, [])
-  const missing = hasRepo ? 'Not in the latest release' : 'No release published yet'
   const cards = [
-    { id: 'mac' as const, title: 'DOWNLOAD FOR MAC', sub: 'Apple Silicon · macOS 12+', asset: mac },
-    { id: 'win' as const, title: 'DOWNLOAD FOR WINDOWS', sub: '64-bit · Windows 10+', asset: win },
+    {
+      id: 'mac' as const,
+      title: 'DOWNLOAD FOR MAC',
+      sub: 'Apple Silicon (M1 and newer) · macOS 12+',
+      asset: mac,
+      missing: hasRepo ? 'Not in the latest release' : 'No release published yet',
+    },
+    {
+      id: 'win' as const,
+      title: 'WINDOWS',
+      sub: '64-bit · Windows 10+',
+      asset: win,
+      missing: 'Coming soon',
+    },
   ].sort((a) => (a.id === os ? -1 : 1))
   return (
     <div className="dl-grid">
@@ -34,17 +45,18 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
           <h3 className="display">{c.title}</h3>
           <p className="muted">{c.sub}</p>
           {c.asset ? (
+            // a direct link to the installer file: the browser saves it to the Downloads folder
             <a className="btn" href={c.asset.url} download>
               DOWNLOAD · {size(c.asset.size)}
             </a>
           ) : (
             <button className="btn" disabled aria-describedby={`m-${c.id}`}>
-              DOWNLOAD
+              {c.id === 'win' ? 'COMING SOON' : 'DOWNLOAD'}
             </button>
           )}
-          {!c.asset && (
+          {!c.asset && c.id !== 'win' && (
             <p className="label" id={`m-${c.id}`}>
-              {missing}
+              {c.missing}
             </p>
           )}
         </div>
@@ -56,7 +68,7 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
             {macIntel ? (
               <a href={macIntel.url}>macOS · Intel ({size(macIntel.size)})</a>
             ) : (
-              <span className="muted">macOS · Intel — not published</span>
+              <span className="muted">Mac with an Intel chip — not available yet</span>
             )}
           </li>
           {linux.length ? (
@@ -68,7 +80,7 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
               </li>
             ))
           ) : (
-            <li className="muted">Linux (AppImage, deb) — not published</li>
+            <li className="muted">Linux — not available yet</li>
           )}
         </ul>
       </div>

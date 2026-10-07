@@ -301,9 +301,7 @@ try {
   assert.equal(await page(`p.value`), '')
   log('a saved login is refused on any other origin')
 
-  await W(
-    `const p = new o.OrbitWindow({ private: true }); globalThis.__p2 = p; return 1`,
-  )
+  await W(`const p = new o.OrbitWindow({ private: true }); globalThis.__p2 = p; return 1`)
   await until(() => W(`return globalThis.__p2.tabs.length > 0`), 'private tab 2')
   await W(`globalThis.__p2.navigate(globalThis.__p2.activeTab, arg); return 1`, base + '/login')
   await until(() => W(`return globalThis.__p2.activeTab.title === 'Login'`), 'private login page')

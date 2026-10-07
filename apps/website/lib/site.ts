@@ -36,7 +36,7 @@ export async function getRelease(): Promise<Release | null> {
   if (!REPO) return null
   try {
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=5`, {
-      next: { revalidate: 1800 },
+      next: { revalidate: 300 },
       headers: { Accept: 'application/vnd.github+json' },
     })
     if (!r.ok) return null

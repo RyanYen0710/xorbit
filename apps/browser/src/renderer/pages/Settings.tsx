@@ -521,7 +521,7 @@ export default function Settings() {
         </Row>
         <Row
           label="Automatically install updates"
-          hint="Off: you’ll be notified and can restart when ready."
+          hint="Off: X Orbit tells you when a new version is out and you download it from the website. Automatic install needs a code-signed build."
         >
           <Toggle
             on={set.autoUpdate}

@@ -257,9 +257,13 @@ export default function Home() {
             <Link className="btn" href="/download">
               macOS
             </Link>
-            <Link className="btn" href="/download">
-              Windows
-            </Link>
+            <span
+              className="btn"
+              aria-disabled="true"
+              style={{ opacity: 0.45, cursor: 'not-allowed' }}
+            >
+              Windows · Coming soon
+            </span>
             <span className="label">BETA · {VERSION}</span>
           </div>
         </div>

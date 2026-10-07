@@ -4,7 +4,7 @@ import { PageHead } from '@/components/Shell'
 import { CHANNEL, CHROME_STORE_URL, REPO, VERSION, fmtSize, getRelease, pick } from '@/lib/site'
 
 export const metadata: Metadata = { title: 'Download' }
-export const revalidate = 1800
+export const revalidate = 300
 
 export default async function Download() {
   const rel = await getRelease()
@@ -24,7 +24,7 @@ export default async function Download() {
             <br />X ORBIT
           </>
         }
-        lede="Free desktop browser for macOS and Windows."
+        lede="Free desktop browser for Mac. Windows is coming soon."
       />
       <div className="container">
         <DownloadCards
@@ -34,6 +34,38 @@ export default async function Download() {
           linux={linux}
           hasRepo={Boolean(REPO)}
         />
+        <section
+          id="mac-install"
+          className="prose"
+          aria-labelledby="mac-h"
+          style={{ marginTop: 32 }}
+        >
+          <div className="label">MAC · HOW TO INSTALL</div>
+          <h3 id="mac-h">Installing on a Mac</h3>
+          <ol style={{ paddingLeft: 20 }}>
+            <li>
+              Click <strong>Download</strong>. The <code>.dmg</code> file lands in your{' '}
+              <strong>Downloads</strong> folder.
+            </li>
+            <li>Open it. A window appears with the X Orbit icon and an Applications folder.</li>
+            <li>
+              <strong>Drag X Orbit onto Applications.</strong>
+            </li>
+            <li>
+              Eject the disk: click the <strong>⏏</strong> next to &ldquo;X Orbit&rdquo; in the
+              Finder sidebar (or right-click it → Eject). You can delete the downloaded{' '}
+              <code>.dmg</code>.
+            </li>
+            <li>Open X Orbit from Applications (or Launchpad).</li>
+          </ol>
+          <p className="muted small">
+            <strong>First launch:</strong> this beta isn&rsquo;t signed with an Apple Developer ID
+            yet, so macOS may say it can&rsquo;t check the app. Open{' '}
+            <strong>System Settings → Privacy &amp; Security</strong>, scroll to the message about X
+            Orbit and click <strong>Open Anyway</strong>. Only do this for the file from this page.
+            Prefer Terminal? <code>xattr -dr com.apple.quarantine /Applications/X\ Orbit.app</code>
+          </p>
+        </section>
         <section
           id="chrome"
           className="dl-card"
@@ -83,7 +115,7 @@ export default async function Download() {
         {!rel && (
           <p className="muted small" role="status">
             {REPO
-              ? 'The Mac and Windows installers are coming to GitHub Releases soon. The Chrome extension above works today.'
+              ? 'The Mac installer is coming to GitHub Releases soon. The Chrome extension below works today.'
               : 'Installers are published through GitHub Releases. Set NEXT_PUBLIC_GITHUB_REPO and publish a release (see docs/distribution.md) and these buttons point at the real files.'}
           </p>
         )}
@@ -116,7 +148,7 @@ export default async function Download() {
             </tr>
             <tr>
               <td>Windows</td>
-              <td>Windows 10 or later · 64-bit</td>
+              <td>Coming soon</td>
             </tr>
             <tr>
               <td>Memory</td>
