@@ -15,7 +15,7 @@ const ENTRIES = [
       'Orbit Search page with Google Programmable Search and Brave Search API backends.',
       'Theme Studio with six presets, custom themes and JSON import/export.',
       'History, downloads manager, pins, session restore, site permissions, cookie and JavaScript controls.',
-      'Packaging for macOS (dmg) and Windows (NSIS) with GitHub Releases auto-update.',
+      'Mac installer (.dmg, Apple Silicon): download, drag to Applications, eject. Windows installer is coming soon. Chrome extension available as a free download.',
     ],
   },
 ]
