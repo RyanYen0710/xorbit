@@ -83,7 +83,7 @@ export default async function Download() {
         {!rel && (
           <p className="muted small" role="status">
             {REPO
-              ? 'The Mac and Windows installers are coming to GitHub Releases soon. The Chrome extension below works today.'
+              ? 'The Mac and Windows installers are coming to GitHub Releases soon. The Chrome extension above works today.'
               : 'Installers are published through GitHub Releases. Set NEXT_PUBLIC_GITHUB_REPO and publish a release (see docs/distribution.md) and these buttons point at the real files.'}
           </p>
         )}
