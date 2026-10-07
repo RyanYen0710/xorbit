@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { DownloadCards } from '@/components/DownloadCards'
+import { ExtensionGuide } from '@/components/ExtensionGuide'
 import { PageHead } from '@/components/Shell'
 import { CHANNEL, CHROME_STORE_URL, REPO, VERSION, fmtSize, getRelease, pick } from '@/lib/site'
 
@@ -88,30 +89,15 @@ export default async function Download() {
               ADD FROM CHROME WEB STORE
             </a>
           )}
-          <ol className="prose" style={{ paddingLeft: 20, marginTop: 8 }}>
-            <li>Unzip the file. You get a folder (keep it somewhere permanent).</li>
-            <li>
-              In Chrome, open <code>chrome://extensions</code>.
-            </li>
-            <li>
-              Turn on <strong>Developer mode</strong> (top right).
-            </li>
-            <li>
-              Click <strong>Load unpacked</strong> and pick the unzipped folder.
-            </li>
-            <li>
-              Pin it from the puzzle-piece menu, then press <strong>Alt+S</strong> for Mission
-              Control or <strong>Alt+O</strong> for the Orbit Bar.
-            </li>
-          </ol>
+          <a className="arrow-link" href="#extension-guide">
+            Step-by-step install guide ↓
+          </a>
           <p className="muted small">
-            Chrome may remind you at startup that a developer-mode extension is installed;
-            that&rsquo;s normal for extensions installed outside the Chrome Web Store. To update,
-            download the new zip and click the reload icon on the extension. The extension
-            can&rsquo;t replace Chrome&rsquo;s own toolbar or tab strip; Spaces use Chrome tab
-            groups.
+            The extension can&rsquo;t replace Chrome&rsquo;s own toolbar or tab strip; Spaces use
+            Chrome tab groups.
           </p>
         </section>
+        <ExtensionGuide />
         {!rel && (
           <p className="muted small" role="status">
             {REPO

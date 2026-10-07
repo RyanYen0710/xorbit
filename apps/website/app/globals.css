@@ -494,3 +494,168 @@ a {
     gap: 12px;
   }
 }
+
+/* install guide */
+.guide {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--orbit-border);
+  max-width: 900px;
+}
+.guide h3 {
+  font-size: clamp(26px, 3.5vw, 40px);
+  margin: 10px 0 12px;
+}
+.guide-tldr {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--orbit-border);
+  border-radius: 8px;
+  color: var(--orbit-text-2);
+  font-size: 15px;
+}
+.guide-tldr strong {
+  color: var(--orbit-text);
+  font-weight: 500;
+}
+.guide-steps {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 0;
+}
+.guide-steps > li {
+  counter-increment: step;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  gap: 10px 28px;
+  align-items: start;
+  padding: 0 0 22px 48px;
+  margin: 0 0 0 14px;
+  border-left: 1px solid var(--orbit-border);
+}
+.guide-steps > li:last-child {
+  border-left-color: transparent;
+  padding-bottom: 8px;
+}
+.guide-steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: -15px;
+  top: -2px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--orbit-border-strong);
+  border-radius: 50%;
+  background: var(--orbit-bg);
+  font: 500 13px var(--orbit-font-mono);
+  color: var(--orbit-text);
+}
+.guide-steps h4 {
+  font: 600 18px var(--orbit-font-display);
+  letter-spacing: -0.01em;
+  margin: 3px 0 6px;
+}
+.guide-steps p {
+  color: var(--orbit-text-2);
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.guide-steps p strong,
+.guide p strong {
+  color: var(--orbit-text);
+  font-weight: 500;
+}
+.guide .note {
+  font-size: 13px;
+  color: var(--orbit-muted);
+}
+.guide code {
+  font-family: var(--orbit-font-mono);
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border: 1px solid var(--orbit-border);
+  border-radius: 4px;
+  color: var(--orbit-text);
+  background: var(--orbit-surface);
+}
+.guide-img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+.guide-keys {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+  display: grid;
+  gap: 5px;
+  font-size: 14px;
+  color: var(--orbit-text-2);
+}
+.guide kbd {
+  font: 11.5px var(--orbit-font-mono);
+  padding: 1px 6px;
+  border: 1px solid var(--orbit-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--orbit-text);
+  background: var(--orbit-surface);
+  margin-right: 2px;
+}
+.copy-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 2px 0 6px;
+}
+.copy-row .btn {
+  padding: 6px 12px;
+  font-size: 11px;
+}
+.faq {
+  margin-top: 24px;
+}
+.faq > .label {
+  margin-bottom: 8px;
+}
+.faq details {
+  border-top: 1px solid var(--orbit-border);
+  padding: 10px 0;
+}
+.faq details:last-child {
+  border-bottom: 1px solid var(--orbit-border);
+}
+.faq summary {
+  cursor: pointer;
+  font-size: 15px;
+}
+.faq summary:focus-visible {
+  outline: 2px solid var(--orbit-accent);
+  outline-offset: 4px;
+}
+.faq p {
+  color: var(--orbit-text-2);
+  margin: 8px 0 0;
+  max-width: 64ch;
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  .guide-steps > li {
+    grid-template-columns: 1fr;
+    padding-left: 40px;
+    margin-left: 12px;
+  }
+  .guide-img {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
