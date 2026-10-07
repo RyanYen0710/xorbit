@@ -1,0 +1,105 @@
+import type { Metadata } from 'next'
+import { PageHead } from '@/components/Shell'
+
+export const metadata: Metadata = { title: 'Privacy' }
+
+const ROWS: [string, string, boolean][] = [
+  [
+    'Block third-party cookies',
+    'Strips cookies on requests to, and responses from, sites other than the one you’re on. Doesn’t cover cookies written by scripts inside embedded frames.',
+    true,
+  ],
+  [
+    'JavaScript switch',
+    'Blocks scripts on web pages with a content-security header. X Orbit’s own pages are unaffected.',
+    true,
+  ],
+  [
+    'Camera, microphone, location, notifications',
+    'Ask, allow or block — as a default and per site, from the lock button in the top strip.',
+    true,
+  ],
+  ['Clear browsing data', 'History, cache, cookies and site data, from Settings → Privacy.', true],
+  [
+    'Separate sessions per Space',
+    'Cookies and logins isolated between Spaces that have it enabled.',
+    true,
+  ],
+  [
+    'Private windows',
+    'No history is written; cookies and cache live in memory and are cleared when the window closes.',
+    true,
+  ],
+  ['Popups and autoplay', 'Popups can be blocked; media autoplay needs a click by default.', true],
+  ['Tracker and ad blocking', 'Not implemented yet.', false],
+  [
+    'Password manager',
+    'Not implemented. If added, it will use the operating system’s secure credential storage.',
+    false,
+  ],
+  [
+    'Sync / accounts',
+    'Not implemented. Nothing leaves your computer except the pages you load.',
+    false,
+  ],
+]
+
+export default function Privacy() {
+  return (
+    <>
+      <PageHead
+        n="05"
+        label="PRIVACY"
+        title={
+          <>
+            YOUR BROWSER.
+            <br />
+            YOUR DATA.
+          </>
+        }
+        lede="Plain statements about what X Orbit does and doesn’t do in this version."
+      />
+      <div className="container">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>What it actually does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map(([a, b, yes]) => (
+              <tr key={a}>
+                <td>
+                  {a}
+                  {!yes && <span className="label"> · NOT YET</span>}
+                </td>
+                <td className={yes ? '' : 'no'}>{b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="prose">
+          <h3>What is stored, and where</h3>
+          <p>
+            History, open tabs, Spaces, pins, settings and download records are stored as files in
+            your user profile folder on your own computer. They are not encrypted by X Orbit; anyone
+            with access to your account can read them.
+          </p>
+          <h3>What leaves your computer</h3>
+          <p>
+            The sites you visit and the search provider you choose see your requests, like in any
+            browser. Installed builds check GitHub Releases for updates. This version contains no
+            analytics or telemetry code.
+          </p>
+          <h3>Private windows</h3>
+          <p>
+            Private windows keep the session’s history and cookies out of your normal browser data.
+            They don’t hide your activity from websites, your network, your employer or your
+            internet provider, and they aren’t an anonymity tool.
+          </p>
+        </div>
+      </div>
+    </>
+  )
+}

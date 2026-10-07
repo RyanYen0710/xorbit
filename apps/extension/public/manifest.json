@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "X Orbit",
+  "short_name": "X Orbit",
+  "version": "0.1.0",
+  "description": "The web, reorbited. Spaces, Mission Control side panel, Orbit Bar command palette and an Orbit new tab for Chrome.",
+  "minimum_chrome_version": "121",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Open Mission Control"
+  },
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "tabs",
+    "tabGroups",
+    "storage",
+    "sidePanel",
+    "bookmarks",
+    "history",
+    "scripting",
+    "activeTab",
+    "sessions",
+    "favicon"
+  ],
+  "commands": {
+    "open-orbit-bar": {
+      "suggested_key": {
+        "default": "Alt+O",
+        "mac": "Alt+O"
+      },
+      "description": "Open the Orbit Bar"
+    },
+    "toggle-mission-control": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "Open Mission Control"
+    },
+    "next-space": {
+      "suggested_key": {
+        "default": "Alt+Shift+Right"
+      },
+      "description": "Next Space"
+    },
+    "prev-space": {
+      "suggested_key": {
+        "default": "Alt+Shift+Left"
+      },
+      "description": "Previous Space"
+    }
+  }
+}

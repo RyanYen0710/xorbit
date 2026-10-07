@@ -1,0 +1,161 @@
+// Shared types: browser state (main → renderers) and the preload API surface.
+
+export type SearchProviderId = 'google' | 'bing' | 'duckduckgo' | 'brave' | 'orbit' | 'custom'
+export type PermissionKey = 'camera' | 'microphone' | 'geolocation' | 'notifications'
+export type PermissionValue = 'allow' | 'block' | 'ask'
+
+export interface Theme {
+  id: string
+  name: string
+  mode: 'dark' | 'light'
+  background: string
+  surface: string // secondary background
+  surface2: string // elevated UI
+  text: string
+  textSecondary: string
+  muted: string
+  border: string
+  borderStrong: string
+  accent: string
+  activeTab: string
+  inactiveTab: string
+  sidebar: string
+  orbitBar: string
+  selection: string
+}
+
+export interface Space {
+  id: string
+  name: string
+  icon: string // 1–2 chars / emoji
+  color: string
+  container: boolean // isolated cookie/session partition
+}
+
+export interface Pin {
+  id: string
+  spaceId: string
+  title: string
+  url: string
+  favicon: string
+  folder: string // '' = top level
+  /** shown in the sidebar's PINNED section (undefined counts as true); every pin is a bookmark on the New Tab grid */
+  favorite?: boolean
+}
+
+export interface TabInfo {
+  id: string
+  spaceId: string
+  url: string
+  title: string
+  favicon: string
+  loading: boolean
+  audible: boolean
+  muted: boolean
+  canGoBack: boolean
+  canGoForward: boolean
+  archived: boolean
+  discarded: boolean
+  lastActive: number
+}
+
+export type DownloadState = 'progressing' | 'paused' | 'completed' | 'cancelled' | 'failed'
+export interface DownloadItem {
+  id: string
+  url: string
+  filename: string
+  savePath: string
+  totalBytes: number
+  receivedBytes: number
+  state: DownloadState
+  startedAt: number
+}
+
+export interface HistoryEntry {
+  id: string
+  url: string
+  title: string
+  visitedAt: number
+}
+
+export interface Settings {
+  onboarded: boolean
+  restoreSession: boolean
+  homepage: string // '' = New Tab page
+  searchProvider: SearchProviderId
+  customSearchUrl: string // contains %s
+  orbitSearchUrl: string
+  themeId: string
+  appearance: 'theme' | 'dark' | 'light' | 'system'
+  archiveAfterHours: number // 0 = never
+  railPosition: 'left' | 'right'
+  railWidth: number
+  animations: boolean
+  compact: boolean
+  orbitBar: boolean
+  blockThirdPartyCookies: boolean
+  javascript: boolean
+  popups: 'allow' | 'block'
+  autoplay: boolean
+  permissionDefaults: Record<PermissionKey, PermissionValue>
+  askDownload: boolean
+  autoUpdate: boolean
+  channel: 'stable' | 'beta' | 'developer'
+}
+
+export type OverlayMode = 'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find'
+
+export interface UIState {
+  windowId: number
+  private: boolean
+  platform: string
+  version: string
+  tabs: TabInfo[]
+  activeTabId: string | null
+  split: { a: string; b: string; ratio: number } | null
+  spaces: Space[]
+  activeSpaceId: string
+  pins: Pin[]
+  downloads: DownloadItem[]
+  settings: Settings
+  theme: Theme
+  customThemes: Theme[]
+  railExpanded: boolean
+  focus: boolean
+  peek: boolean
+  overlay: { mode: OverlayMode; text: string; seq: number }
+  pageRect: { x: number; y: number; width: number; height: number }
+  update: string
+  find: { active: number; total: number }
+}
+
+export interface Suggestion {
+  id: string
+  kind: 'url' | 'search' | 'tab' | 'pin' | 'history' | 'command' | 'calc'
+  title: string
+  sub?: string
+  favicon?: string
+  run: { type: string; payload: Record<string, unknown> }
+}
+
+export interface SiteInfo {
+  origin: string
+  host: string
+  secure: boolean
+  internal: boolean
+  cookies: number
+  perms: Record<PermissionKey, PermissionValue>
+}
+
+export interface OrbitApi {
+  getState(): Promise<UIState>
+  onState(cb: (s: UIState) => void): () => void
+  act(type: string, payload?: Record<string, unknown>): Promise<any>
+  query(type: string, payload?: Record<string, unknown>): Promise<any>
+}
+
+declare global {
+  interface Window {
+    orbit: OrbitApi
+  }
+}

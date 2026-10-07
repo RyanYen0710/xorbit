@@ -1,0 +1,29 @@
+{
+  "name": "@orbit/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && vite build --config vite.bar.config.ts",
+    "typecheck": "tsc -p .",
+    "package": "pnpm build && mkdir -p ../website/public/downloads && rm -f ../website/public/downloads/x-orbit-extension.zip && cd dist && zip -qr ../../website/public/downloads/x-orbit-extension.zip .",
+    "test": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "@orbit/search": "workspace:*",
+    "@orbit/themes": "workspace:*",
+    "@orbit/types": "workspace:*",
+    "@orbit/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "playwright-core": "^1.63.0",
+    "vite": "^7.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules
+out
+dist
+.next
+.env
+.env.local
+*.log
+.DS_Store
+apps/browser/release

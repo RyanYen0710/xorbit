@@ -1,0 +1,90 @@
+/* X Orbit shared design tokens + base. Imported by the browser UI, the website and Orbit Search. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  /* ORBIT / ZERO defaults — overridden at runtime by @orbit/themes */
+  --orbit-bg: #050505;
+  --orbit-surface: #0d0d0d;
+  --orbit-surface-2: #151515;
+  --orbit-text: #f5f5f2;
+  --orbit-text-2: #a0a0a0;
+  --orbit-muted: #686868;
+  --orbit-border: rgba(255, 255, 255, 0.12);
+  --orbit-border-strong: rgba(255, 255, 255, 0.22);
+  --orbit-accent: #9cb4d8;
+  --orbit-tab-active: #1a1a1a;
+  --orbit-tab-inactive: transparent;
+  --orbit-sidebar: #0a0a0a;
+  --orbit-bar: #111111;
+  --orbit-selection: rgba(156, 180, 216, 0.25);
+
+  --orbit-radius-sm: 4px;
+  --orbit-radius-md: 8px;
+  --orbit-radius-lg: 14px;
+  --orbit-motion-fast: 120ms;
+  --orbit-motion: 200ms;
+  --orbit-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --orbit-font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --orbit-font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+  --orbit-font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--orbit-bg);
+  color: var(--orbit-text);
+  font-family: var(--orbit-font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--orbit-selection);
+}
+:focus-visible {
+  outline: 2px solid var(--orbit-accent);
+  outline-offset: 2px;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.orbit-label {
+  font-family: var(--orbit-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orbit-muted);
+}
+.orbit-display {
+  font-family: var(--orbit-font-display);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --orbit-motion-fast: 0ms;
+    --orbit-motion: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "x-orbit",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm dev:browser",
+    "dev:browser": "pnpm --filter @orbit/browser dev",
+    "dev:web": "pnpm --filter @orbit/website dev",
+    "dev:search": "pnpm --filter @orbit/search-app dev",
+    "build": "pnpm -r build",
+    "package": "pnpm --filter @orbit/browser package",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @orbit/search test",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.9",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.1"
+  }
+}
