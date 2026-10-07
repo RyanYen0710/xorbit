@@ -1,6 +1,11 @@
 export const VERSION = '0.1.0'
 export const CHANNEL = 'BETA'
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+// NEXT_PUBLIC_SITE_URL wins; on Vercel fall back to its production URL; locally use localhost.
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000')
 /** "owner/repo" whose GitHub Releases host the installers. Unset → download buttons stay disabled. */
 /** Chrome Web Store listing URL. Unset → the "Add to Chrome" button stays disabled. */
 export const CHROME_STORE_URL = process.env.NEXT_PUBLIC_CHROME_STORE_URL ?? ''
