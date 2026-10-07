@@ -83,7 +83,7 @@ export default async function Download() {
         {!rel && (
           <p className="muted small" role="status">
             {REPO
-              ? 'No release could be fetched from GitHub right now.'
+              ? 'The Mac and Windows installers are coming to GitHub Releases soon. The Chrome extension below works today.'
               : 'Installers are published through GitHub Releases. Set NEXT_PUBLIC_GITHUB_REPO and publish a release (see docs/distribution.md) and these buttons point at the real files.'}
           </p>
         )}
