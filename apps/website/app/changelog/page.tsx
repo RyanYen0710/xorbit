@@ -5,6 +5,15 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.1',
+    channel: 'Beta',
+    items: [
+      'Fixes the Mac installer: the app is now properly signed, so macOS no longer says it is "damaged" and offers to move it to the Trash. Instead you confirm once with Open Anyway.',
+      'No more flashing when switching between Settings, History, Downloads and Pins.',
+      'Simpler install steps on the Download page.',
+    ],
+  },
+  {
     v: '0.1.0',
     channel: 'Beta',
     items: [

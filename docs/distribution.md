@@ -24,7 +24,7 @@ You need an **Apple Developer Program** membership (paid) and a **Developer ID A
 3. Run `pnpm package`. With all three Apple variables present, electron-builder signs, notarizes and staples automatically
    (`notarize` in `electron-builder.config.cjs`). Hardened runtime + `resources/entitlements.mac.plist` are already set.
 
-Unsigned builds work but Gatekeeper will warn users; the download page says so.
+Unsigned builds are sealed with an ad-hoc signature by `apps/browser/scripts/adhoc-sign.cjs` (without it macOS calls a downloaded copy "damaged"). Gatekeeper still asks users to confirm once (System Settings → Privacy & Security → Open Anyway); the download page explains it. Only a paid Developer ID + notarization removes that prompt.
 
 ## Windows signing
 

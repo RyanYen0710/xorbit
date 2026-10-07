@@ -45,26 +45,27 @@ export default async function Download() {
           <h3 id="mac-h">Installing on a Mac</h3>
           <ol style={{ paddingLeft: 20 }}>
             <li>
-              Click <strong>Download</strong>. The <code>.dmg</code> file lands in your{' '}
-              <strong>Downloads</strong> folder.
-            </li>
-            <li>Open it. A window appears with the X Orbit icon and an Applications folder.</li>
-            <li>
-              <strong>Drag X Orbit onto Applications.</strong>
+              Click <strong>Download</strong>, then open the <code>.dmg</code> from your Downloads
+              folder.
             </li>
             <li>
-              Eject the disk: click the <strong>⏏</strong> next to &ldquo;X Orbit&rdquo; in the
-              Finder sidebar (or right-click it → Eject). You can delete the downloaded{' '}
-              <code>.dmg</code>.
+              <strong>Drag X Orbit onto Applications</strong>, then eject the disk (the{' '}
+              <strong>⏏</strong> next to &ldquo;X Orbit&rdquo; in Finder).
             </li>
-            <li>Open X Orbit from Applications (or Launchpad).</li>
+            <li>
+              Open X Orbit from Applications. The first time, macOS says it can&rsquo;t verify the
+              developer. Click <strong>Done</strong> (not &ldquo;Move to Trash&rdquo;).
+            </li>
+            <li>
+              Open <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the X
+              Orbit message and click <strong>Open Anyway</strong>, then <strong>Open</strong>. You
+              only do this once.
+            </li>
           </ol>
           <p className="muted small">
-            <strong>First launch:</strong> this beta isn&rsquo;t signed with an Apple Developer ID
-            yet, so macOS may say it can&rsquo;t check the app. Open{' '}
-            <strong>System Settings → Privacy &amp; Security</strong>, scroll to the message about X
-            Orbit and click <strong>Open Anyway</strong>. Only do this for the file from this page.
-            Prefer Terminal? <code>xattr -dr com.apple.quarantine /Applications/X\ Orbit.app</code>
+            Why the extra step? X Orbit is free and not yet signed with a paid Apple Developer ID,
+            so macOS asks you to confirm it. Only do this for the file from this page. If you see
+            &ldquo;X Orbit is damaged&rdquo;, you have the old 0.1.0 file &mdash; download it again.
           </p>
         </section>
         <section
@@ -95,6 +96,11 @@ export default async function Download() {
           <p className="muted small">
             The extension can&rsquo;t replace Chrome&rsquo;s own toolbar or tab strip; Spaces use
             Chrome tab groups.
+          </p>
+          <p className="muted small">
+            <strong>School, work or supervised (Family Link) Chrome?</strong> Those accounts block
+            Developer mode, so the extension can&rsquo;t be installed there. Use the Mac app instead
+            &mdash; it needs no Chrome settings.
           </p>
         </section>
         <ExtensionGuide />
