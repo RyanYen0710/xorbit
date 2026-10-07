@@ -1,0 +1,127 @@
+rules_version = '2';
+
+// X Orbit Support Center - Firestore security rules.
+// These run on Google's servers for EVERY request, so nothing the browser does (or fakes) can bypass them.
+//
+//   admins/{uid}                 who is an administrator. Created ONLY in the Firebase console; clients can never write it.
+//   users/{uid}                  rate-limit marker: when this person last opened a ticket.
+//   tickets/{XO-yymmdd-XXXX}     one support ticket (owner = the person who opened it).
+//   tickets/{id}/messages/{id}   the conversation on a ticket (immutable once written).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // Email addresses must be verified before anything is allowed (Google accounts always are).
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+
+    // Administrator = a verified GOOGLE sign-in (so Google's 2-Step Verification applies), listed in /admins by the
+    // owner in the console, who signed in within the last 8 hours (forces a fresh Google login, and 2SV prompt, each day).
+    function isAdmin() {
+      return verified()
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && request.time.toMillis() - request.auth.token.auth_time * 1000 < 28800000;
+    }
+
+    function text(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;   // lets the app know "am I an admin?"; reveals nothing else
+      allow write: if false;                                  // console only
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      // At most one new ticket per minute per person, measured with the server clock (request.time).
+      allow create: if verified() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastTicketAt'])
+        && request.resource.data.lastTicketAt == request.time;
+      allow update: if verified() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastTicketAt'])
+        && request.resource.data.lastTicketAt == request.time
+        && resource.data.lastTicketAt < request.time - duration.value(60, 's');
+      allow delete: if false;
+    }
+
+    match /tickets/{tid} {
+      function mine() { return verified() && resource.data.uid == request.auth.uid; }
+
+      function validNew(d) {
+        return d.keys().hasOnly(['uid', 'email', 'name', 'title', 'category', 'product', 'impact', 'details', 'steps',
+                                 'expected', 'frequency', 'url', 'version', 'system', 'browser', 'diagnostics',
+                                 'status', 'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageBy'])
+          && d.uid == request.auth.uid
+          && d.email == request.auth.token.email
+          && text(d.name, 0, 80)
+          && text(d.title, 6, 120)
+          && d.category in ['Bug or crash', 'Performance or memory', 'Website problem in X Orbit', 'Passwords, cards and autofill',
+                            'Downloads and installer', 'Chrome extension', 'Privacy question', 'Feature request', 'Account or something else']
+          && d.product in ['X Orbit for Mac', 'X Orbit Chrome extension', 'Orbit Search', 'The website', 'Not sure']
+          && d.impact in ['I cannot use X Orbit (crash or will not open)', 'A feature is broken', 'It works but looks wrong or feels slow', 'Just a question or suggestion']
+          && text(d.details, 20, 5000)
+          && text(d.steps, 0, 3000)
+          && text(d.expected, 0, 2000)
+          && d.frequency in ['', 'Every time', 'Sometimes', 'Only once']
+          && text(d.url, 0, 500)
+          && text(d.version, 0, 100)
+          && text(d.system, 0, 100)
+          && text(d.browser, 0, 100)
+          && text(d.diagnostics, 0, 1500)
+          && d.status == 'open'
+          && d.createdAt == request.time && d.updatedAt == request.time && d.lastMessageAt == request.time
+          && d.lastMessageBy == 'user';
+      }
+
+      // After an update only these may differ; status/updatedAt/lastMessage* are how a conversation moves along.
+      function onlyConversationFields() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'lastMessageAt', 'lastMessageBy'])
+          && request.resource.data.updatedAt == request.time
+          && (request.resource.data.lastMessageAt == resource.data.lastMessageAt || request.resource.data.lastMessageAt == request.time);
+      }
+
+      allow read: if isAdmin() || mine();
+
+      allow create: if verified()
+        && tid.matches('XO-[0-9]{6}-[2-9A-HJKMNP-Z]{4}')
+        && validNew(request.resource.data)
+        // the same batch must also stamp users/{uid}.lastTicketAt, which enforces the one-per-minute limit
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.lastTicketAt == request.time;
+
+      allow update: if onlyConversationFields() && (
+        (isAdmin() && request.resource.data.status in ['open', 'pending', 'solved', 'closed']
+                   && (request.resource.data.lastMessageAt == resource.data.lastMessageAt || request.resource.data.lastMessageBy == 'admin'))
+        || (mine() && request.resource.data.status in ['open', 'closed']
+                   && (request.resource.data.lastMessageAt == resource.data.lastMessageAt || request.resource.data.lastMessageBy == 'user'))
+      );
+
+      allow delete: if isAdmin() || mine();
+
+      match /messages/{mid} {
+        function parent() { return get(/databases/$(database)/documents/tickets/$(tid)).data; }
+        function after() { return getAfter(/databases/$(database)/documents/tickets/$(tid)).data; }
+
+        allow read: if isAdmin() || (verified() && parent().uid == request.auth.uid);
+
+        // Messages are written together with a ticket update (same batch) that sets lastMessageAt/lastMessageBy.
+        allow create: if request.resource.data.keys().hasOnly(['uid', 'role', 'text', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && text(request.resource.data.text, 1, 5000)
+          && request.resource.data.createdAt == request.time
+          && after().lastMessageAt == request.time
+          && (
+            (isAdmin() && request.resource.data.role == 'admin' && after().lastMessageBy == 'admin')
+            || (verified() && parent().uid == request.auth.uid && request.resource.data.role == 'user' && after().lastMessageBy == 'user'
+                && parent().status != 'closed'
+                && parent().lastMessageAt < request.time - duration.value(5, 's'))   // at most one message per 5 seconds
+          );
+
+        allow update: if false;
+        allow delete: if isAdmin() || (verified() && parent().uid == request.auth.uid);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

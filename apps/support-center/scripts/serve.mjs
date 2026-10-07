@@ -12,10 +12,24 @@ const headers = Object.fromEntries(
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
   '.css': 'text/css',
   '.svg': 'image/svg+xml',
   '.woff2': 'font/woff2',
 }
+
+// Tests add the local emulator hosts to the production policy (EXTRA_CONNECT / EXTRA_FRAME); nothing else is loosened.
+const extra = (k, v) => (v ? ` ${v}` : '')
+if (process.env.EXTRA_CONNECT)
+  headers['Content-Security-Policy'] = headers['Content-Security-Policy'].replace(
+    "connect-src 'self'",
+    `connect-src 'self'${extra('c', process.env.EXTRA_CONNECT)}`,
+  )
+if (process.env.EXTRA_FRAME)
+  headers['Content-Security-Policy'] = headers['Content-Security-Policy'].replace(
+    'frame-src',
+    `frame-src ${process.env.EXTRA_FRAME}`,
+  )
 
 export function serve(port = 4500) {
   const server = http.createServer((req, res) => {
@@ -23,8 +37,9 @@ export function serve(port = 4500) {
     const rel = url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)
     const file = path.resolve(root, '.' + rel)
     const allowed =
-      ['/index.html', '/app.js', '/app.css', '/config.js', '/favicon.svg'].includes(rel) ||
-      rel.startsWith('/fonts/')
+      ['/index.html', '/app.css', '/config.js', '/firebase-config.js', '/favicon.svg'].includes(
+        rel,
+      ) || /^\/(fonts|js|vendor)\//.test(rel)
     if (!allowed || !file.startsWith(root + path.sep) || !fs.existsSync(file)) {
       res.writeHead(404)
       return res.end('not found')

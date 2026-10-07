@@ -2,12 +2,10 @@
   "name": "@orbit/support-center",
   "version": "0.1.0",
   "private": true,
-  "description": "X Orbit Support Center: static ticket form (no build step).",
+  "description": "X Orbit Support Center: accounts + tickets (static site, Firebase Auth + Firestore). Tooling lives in dev/.",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "test": "node scripts/e2e.mjs"
-  },
-  "devDependencies": {
-    "playwright-core": "^1.63.0"
+    "test": "cd dev && node run-emulators.mjs rules && node run-emulators.mjs app",
+    "build:vendor": "cd dev && node build-vendor.mjs"
   }
 }

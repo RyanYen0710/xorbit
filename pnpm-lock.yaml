@@ -302,11 +302,7 @@ importers:
         specifier: ^24.0.0
         version: 24.19.1
 
-  apps/support-center:
-    devDependencies:
-      playwright-core:
-        specifier: ^1.63.0
-        version: 1.63.0
+  apps/support-center: {}
 
   apps/website:
     dependencies:

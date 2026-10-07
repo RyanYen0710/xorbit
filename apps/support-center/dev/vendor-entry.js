@@ -1,0 +1,37 @@
+// Only what the Support Center uses, bundled into ../vendor/firebase.js (so the page loads no third-party scripts of its own).
+export { initializeApp } from 'firebase/app'
+export {
+  getAuth,
+  onAuthStateChanged,
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  connectAuthEmulator,
+  updateProfile,
+} from 'firebase/auth'
+export {
+  getFirestore,
+  connectFirestoreEmulator,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  writeBatch,
+  serverTimestamp,
+  Timestamp,
+} from 'firebase/firestore'
