@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { headers } from 'next/headers'
 import './globals.css'
 import { Footer, Header } from '@/components/Shell'
 import { SITE_URL } from '@/lib/site'
@@ -18,7 +19,8 @@ export const metadata: Metadata = {
 }
 export const viewport: Viewport = { themeColor: '#050505', colorScheme: 'dark' }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await headers() // dynamic rendering: every page is built per request so Next can put the CSP nonce on its scripts
   return (
     <html lang="en">
       <body>

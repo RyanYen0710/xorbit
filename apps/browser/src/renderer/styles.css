@@ -1816,3 +1816,208 @@ html[data-route='overlay'] #root:has(.upd) {
 .upd-actions:empty {
   display: none;
 }
+
+/* X Orbit account (Settings → Account) */
+.acct {
+  display: grid;
+  gap: 14px;
+  max-width: 460px;
+}
+.acct form {
+  display: grid;
+  gap: 14px;
+}
+.acct-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--orbit-border);
+}
+.acct-tabs button {
+  flex: 1;
+  padding: 10px 0;
+  color: var(--orbit-muted);
+  font-family: var(--orbit-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+}
+.acct-tabs button[aria-selected='true'] {
+  color: var(--orbit-text);
+  border-bottom-color: var(--orbit-text);
+}
+.acct-h {
+  margin: 0;
+  font: 600 18px var(--orbit-font);
+}
+.acct-or {
+  margin: 0;
+  text-align: center;
+  color: var(--orbit-muted);
+  font-family: var(--orbit-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.acct-field {
+  display: grid;
+  gap: 6px;
+}
+.acct-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--orbit-text-2);
+}
+.acct .btn.wide {
+  width: 100%;
+}
+.acct-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.acct .link {
+  justify-self: start;
+  background: none;
+  border: 0;
+  color: var(--orbit-text-2);
+  text-decoration: underline;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.acct-msg {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--orbit-border-strong);
+  border-radius: var(--orbit-radius-md);
+  font-size: 13px;
+}
+.acct-msg[data-kind='ok'] {
+  color: #6fd08c;
+  border-color: color-mix(in srgb, #6fd08c 50%, transparent);
+}
+.acct-msg[data-kind='error'] {
+  color: #e5775f;
+  border-color: color-mix(in srgb, #e5775f 50%, transparent);
+}
+.acct-wait {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--orbit-border-strong);
+  border-radius: var(--orbit-radius-md);
+  font-size: 13px;
+}
+.spin {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--orbit-border-strong);
+  border-top-color: var(--orbit-accent);
+  border-radius: 50%;
+  animation: acct-spin 0.8s linear infinite;
+}
+@keyframes acct-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rules,
+.acct-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.rules li,
+.acct-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e5775f;
+  transition: color 0.2s;
+}
+.rules li[data-ok='true'],
+.acct-list li[data-ok='true'] {
+  color: #6fd08c;
+}
+.rules .mark,
+.acct-list .mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  font-weight: 700;
+}
+.rules li[data-ok='true'] .mark {
+  animation: acct-pop 0.25s ease-out;
+}
+.acct-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.acct-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--orbit-accent);
+  color: var(--orbit-bg);
+  font: 700 18px var(--orbit-font);
+}
+.acct-name {
+  font-weight: 600;
+}
+.success {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+.success-mark {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border: 3px solid #6fd08c;
+  border-radius: 50%;
+  animation: acct-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.success-mark::after {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: 12px;
+  width: 18px;
+  height: 34px;
+  border: solid #6fd08c;
+  border-width: 0 4px 4px 0;
+  transform: rotate(45deg) scale(0);
+  transform-origin: 30% 80%;
+  animation: acct-tick 0.35s 0.3s ease-out forwards;
+}
+.success-text {
+  margin: 0;
+  color: #6fd08c;
+  font: 600 15px var(--orbit-font);
+}
+@keyframes acct-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes acct-tick {
+  to {
+    transform: rotate(45deg) scale(1);
+  }
+}

@@ -29,6 +29,7 @@ import { sessionFor } from './session'
 import { isBrowser, readBookmarks } from './bookmarks'
 import * as vault from './vault'
 import { copySecret } from './autofill'
+import * as account from './account'
 
 const str = (v: unknown, max = 2000): string => (typeof v === 'string' && v.length <= max ? v : '')
 const bool = (v: unknown) => typeof v === 'boolean'
@@ -473,6 +474,17 @@ const ACT: Record<string, Handler> = {
   updateCheck: () => checkForUpdates(true),
   updateDownload: () => downloadUpdate(),
   updateInstall: () => installUpdate(),
+  // X Orbit account (every result is "ok" or a plain message starting with "!")
+  accountSignUp: (_w, p) =>
+    account.signUp(str(p.email, 200), str(p.password, 200), str(p.name, 80)),
+  accountSignIn: (_w, p) => account.signIn(str(p.email, 200), str(p.password, 200)),
+  accountGoogle: (_w, p) => account.googleStart(!!p.link),
+  accountGoogleCancel: () => account.googleCancel(),
+  accountResend: () => account.resendVerification(),
+  accountVerified: () => account.refreshVerified(),
+  accountPoll: () => account.pollVerified(),
+  accountReset: (_w, p) => account.resetPassword(str(p.email, 200)),
+  accountSignOut: () => account.signOut(),
   updateNow: () => downloadUpdate(),
   updateRetry: async () => {
     await checkForUpdates(true)

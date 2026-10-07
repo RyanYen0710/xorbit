@@ -107,6 +107,19 @@ export interface Settings {
 export type OverlayMode =
   'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find' | 'dialog' | 'menu' | 'update'
 
+/** The signed-in X Orbit account (tokens stay in the main process, never here). */
+export interface AccountState {
+  signedIn: boolean
+  loading: boolean // checking a saved sign-in at startup
+  busy: boolean // a request is running
+  googleWaiting: boolean // waiting for the person to finish signing in with Google in their browser
+  email: string
+  name: string
+  verified: boolean
+  providers: string[] // 'password', 'google.com'
+  error: string // last problem from a background step (e.g. the Google sign-in), cleared on the next try
+}
+
 /** Where the self-updater is: drives the update card (progress bar, speed, size). */
 export type UpdatePhase =
   | 'idle'
@@ -180,6 +193,7 @@ export interface UIState {
   pageRect: { x: number; y: number; width: number; height: number }
   update: string
   updater: UpdaterState
+  account: AccountState
   railPx: number
   topPx: number
   find: { active: number; total: number }

@@ -3,3 +3,4 @@ out
 dist
 .next
 pnpm-lock.yaml
+next-env.d.ts

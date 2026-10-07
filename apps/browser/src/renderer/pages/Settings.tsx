@@ -4,6 +4,7 @@ import { PRESETS } from '@orbit/themes'
 import type { PermissionKey, PermissionValue, Settings as S, SearchProviderId } from '@orbit/types'
 import { act, confirmBox, kbdLabel, useOrbit } from '../state'
 import { EmbedContext, Page, Row, Toggle } from './shared'
+import { AccountSection } from './Account'
 import { PasswordsSection, PaymentsSection } from './Vault'
 
 const HistoryPage = lazy(() => import('./History'))
@@ -11,6 +12,7 @@ const DownloadsPage = lazy(() => import('./Downloads'))
 const PinsPage = lazy(() => import('./Pins'))
 
 const SECTIONS = [
+  'Account',
   'General',
   'Appearance',
   'Themes',
@@ -32,6 +34,7 @@ const SECTIONS = [
 type Sec = (typeof SECTIONS)[number]
 const keyOf = (x: string) => x.toLowerCase().replace(/[^a-z]/g, '')
 const SLUG: Record<string, Sec> = {
+  account: 'Account',
   privacy: 'Privacy',
   search: 'Search',
   about: 'About X Orbit',
@@ -485,6 +488,7 @@ export default function Settings() {
         </Suspense>
       </EmbedContext.Provider>
     ),
+    Account: <AccountSection />,
     Passwords: <PasswordsSection />,
     'Payment methods': <PaymentsSection />,
     'Pins & Bookmarks': (

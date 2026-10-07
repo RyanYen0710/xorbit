@@ -8,6 +8,7 @@ import { windows, focusedWindow, byContents } from './registry'
 import { initIpc } from './ipc'
 import { buildMenu } from './menu'
 import { initUpdater } from './updater'
+import { initAccount } from './account'
 import { resolveInput } from '@orbit/search'
 import { initAutofill, fillLogin, fillCard } from './autofill'
 import * as vault from './vault'
@@ -59,6 +60,7 @@ void app.whenReady().then(() => {
   initIpc()
   initAutofill()
   initUpdater()
+  void initAccount()
   new OrbitWindow()
   setInterval(() => windows.forEach((w) => w.sweep()), 60_000)
   app.on('activate', () => {

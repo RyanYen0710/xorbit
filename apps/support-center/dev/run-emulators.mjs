@@ -11,11 +11,14 @@ if (!fs.existsSync(path.join(javaHome, 'bin/java'))) {
   console.error(`Java not found at ${javaHome}. See README (Testing) to download it into .tools/.`)
   process.exit(1)
 }
-const script = { rules: 'rules.test.mjs', app: 'app.e2e.mjs', reviews: 'reviews.e2e.mjs' }[
-  process.argv[2]
-]
+const script = {
+  rules: 'dev/rules.test.mjs',
+  app: 'dev/app.e2e.mjs',
+  reviews: 'dev/reviews.e2e.mjs',
+  account: '../browser/scripts/account.e2e.mjs',
+}[process.argv[2]]
 if (!script) {
-  console.error('usage: node run-emulators.mjs rules|app|reviews')
+  console.error('usage: node run-emulators.mjs rules|app|reviews|account')
   process.exit(1)
 }
 
@@ -29,7 +32,7 @@ const r = spawnSync(
     'demo-xorbit-support',
     '--config',
     'firebase.json',
-    `node dev/${script}`,
+    `node ${script}`,
   ],
   {
     cwd: path.resolve(import.meta.dirname, '..'),

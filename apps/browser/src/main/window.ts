@@ -18,6 +18,7 @@ import { sessionFor, setupSession } from './session'
 import { byContents, windows } from './registry'
 import * as hist from './history'
 import { checkStatus, updaterState } from './updater'
+import { accountState, openInOtherBrowser } from './account'
 
 const PRELOAD = path.join(__dirname, '../preload/index.js')
 const SHELL_PREFS = {
@@ -30,6 +31,8 @@ const IDLE_DISCARD_MS = 15 * 60_000
 const RAIL_COLLAPSED = 64
 const TOP_H = 36
 const GAP = 6
+/** The page Google shows when it refuses a browser. */
+const GOOGLE_BLOCK = /^https:\/\/accounts\.google\.com\/.*\/signin\/rejected/
 const BAR = { w: 380, h: 44, bottom: 18 }
 const EXIT_W = 112
 const PRIVATE_THEME: Partial<Theme> = {
@@ -252,6 +255,7 @@ export class OrbitWindow {
       pageRect: this.rect,
       update: checkStatus(),
       updater: updaterState(),
+      account: accountState(),
       railPx: this.railPx,
       topPx: this.topPx,
       find: this.find,
@@ -876,6 +880,7 @@ export class OrbitWindow {
     })
     const nav = (_e: unknown, raw: string, ..._r: unknown[]) => {
       const url = canon(raw)
+      if (GOOGLE_BLOCK.test(url)) this.googleBlocked(tab.url)
       if (pageOf(url) === 'error') {
         tab.url = new URL(url).searchParams.get('url') || tab.url
         return this.changed()
@@ -915,6 +920,30 @@ export class OrbitWindow {
       this.relayout()
     })
     wc.on('context-menu', (_e, p) => this.pageMenu(tab, wc, p))
+  }
+
+  /** Google refuses sign-in in browsers it does not recognise. Say so plainly and offer a way forward. */
+  private blockShownAt = 0
+  private googleBlocked(from: string) {
+    if (Date.now() - this.blockShownAt < 5000) return // one notice per refusal
+    this.blockShownAt = Date.now()
+    const back =
+      /^https:\/\/accounts\.google\.com\//.test(from) && !GOOGLE_BLOCK.test(from)
+        ? from
+        : 'https://accounts.google.com/'
+    void this.confirm({
+      title: 'Google does not allow sign-in in this browser',
+      message:
+        'Google only lets browsers it recognises sign in to Google accounts. Open this page in Chrome to sign in there, or use your X Orbit account here.',
+      buttons: [
+        { label: 'Cancel', value: 'cancel', kind: 'ghost' },
+        { label: 'Use X Orbit account', value: 'account', kind: 'ghost' },
+        { label: 'Open in Chrome', value: 'chrome', kind: 'primary' },
+      ],
+    }).then((r) => {
+      if (r.value === 'chrome') openInOtherBrowser(back)
+      else if (r.value === 'account') this.openInternal('settings', 'account')
+    })
   }
 
   private pageMenu(tab: Tab, wc: Electron.WebContents, p: Electron.ContextMenuParams) {
