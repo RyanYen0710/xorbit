@@ -129,11 +129,28 @@ export function authView(go) {
       required: true,
       maxlength: '200',
     })
-    const rules = h(
-      'p',
-      { class: 'hint', id: 'su-rules' },
-      'At least 8 characters with an uppercase letter, a lowercase letter and a number.',
-    )
+    const RULES = ['at least 8 characters', 'an uppercase letter', 'a lowercase letter', 'a number']
+    const rules = h('ul', { class: 'rules', id: 'su-rules', 'aria-live': 'polite' })
+    function drawRules() {
+      const bad = A.passwordProblems(pw.value, email.value)
+      // Extra checks (common password / contains your email) only show up if they are the problem.
+      const items = [...RULES, ...bad.filter((b) => !RULES.includes(b))]
+      rules.replaceChildren(
+        ...items.map((label) => {
+          const ok = !bad.includes(label)
+          return h(
+            'li',
+            { 'data-ok': String(ok) },
+            h(
+              'span',
+              { class: 'mark', role: 'img', 'aria-label': ok ? 'met' : 'not met' },
+              ok ? '\u2713' : '\u2717',
+            ),
+            label.charAt(0).toUpperCase() + label.slice(1),
+          )
+        }),
+      )
+    }
     const show = h('input', {
       id: 'su-show',
       type: 'checkbox',
@@ -141,15 +158,9 @@ export function authView(go) {
         pw.type = pw2.type = show.checked ? 'text' : 'password'
       },
     })
-    pw.addEventListener('input', () => {
-      const p = A.passwordProblems(pw.value, email.value)
-      rules.textContent = pw.value
-        ? p.length
-          ? `Still needs: ${p.join(', ')}.`
-          : 'Strong enough.'
-        : 'At least 8 characters with an uppercase letter, a lowercase letter and a number.'
-      rules.dataset.ok = pw.value && !p.length ? 'true' : 'false'
-    })
+    pw.addEventListener('input', drawRules)
+    email.addEventListener('input', () => pw.value && drawRules())
+    drawRules()
     const form = h(
       'form',
       {
@@ -281,9 +292,19 @@ export function authView(go) {
 export function verifyView(go) {
   const msg = h('div', { 'aria-live': 'polite' })
   let last = 0
+  // true only right after sign-up (the screen can redraw a few times in a row, so expire it by time)
+  const fresh = A.state.justCreated
+  if (fresh) setTimeout(() => (A.state.justCreated = false), 4000)
   return h(
     'div',
     { class: 'auth' },
+    fresh &&
+      h(
+        'div',
+        { class: 'success', role: 'status' },
+        h('span', { class: 'success-mark', 'aria-hidden': 'true' }),
+        h('p', { class: 'success-text' }, 'Account created'),
+      ),
     h('h2', {}, 'Confirm your email'),
     h(
       'p',

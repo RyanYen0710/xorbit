@@ -83,6 +83,13 @@ try {
   await P.fill('#su-pw2', 'weak')
   await P.getByRole('button', { name: 'Create account' }).click()
   assert.match(await P.locator('#e-su-pw').innerText(), /at least 8 characters.*uppercase.*number/)
+  // live checklist: 'weak' meets only the lowercase rule
+  assert.deepEqual(await P.locator('#su-rules li').evaluateAll((l) => l.map((e) => e.dataset.ok)), [
+    'false',
+    'false',
+    'true',
+    'false',
+  ])
   await P.fill('#su-pw', 'Sturdy-pass-42')
   await P.fill('#su-pw2', 'Different-pass-42')
   await P.getByRole('button', { name: 'Create account' }).click()
@@ -101,6 +108,8 @@ try {
   await P.fill('#su-pw2', 'Sturdy-pass-42')
   await P.getByRole('button', { name: 'Create account' }).click()
   await P.getByRole('heading', { name: 'Confirm your email' }).waitFor()
+  assert.equal(await P.locator('.success-mark').count(), 1, 'success tick shows after sign-up')
+  log('password checklist turns red/green and the account-created tick appears')
   log('a strong password creates the account and asks for email confirmation')
 
   // 2) unverified users are locked out until they click the link

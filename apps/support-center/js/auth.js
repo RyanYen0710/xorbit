@@ -80,10 +80,16 @@ const persist = (remember) =>
 
 export async function signUp(email, password, name, remember) {
   await persist(remember)
-  const cred = await fb.createUserWithEmailAndPassword(auth, email, password)
-  if (name) await fb.updateProfile(cred.user, { displayName: name.slice(0, 80) })
-  await fb.sendEmailVerification(cred.user)
-  return cred.user
+  state.justCreated = true // set first: the screen redraws as soon as the account exists
+  try {
+    const cred = await fb.createUserWithEmailAndPassword(auth, email, password)
+    if (name) await fb.updateProfile(cred.user, { displayName: name.slice(0, 80) })
+    await fb.sendEmailVerification(cred.user)
+    return cred.user
+  } catch (e) {
+    state.justCreated = false
+    throw e
+  }
 }
 export async function signIn(email, password, remember) {
   await persist(remember)
