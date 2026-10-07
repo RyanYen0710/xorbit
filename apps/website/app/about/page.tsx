@@ -25,6 +25,10 @@ export default function About() {
           Animations last a fraction of a second and respect reduced-motion settings.{' '}
           <strong>Honest.</strong> We describe what is built, and what isn’t.
         </p>
+        <h3>Leadership</h3>
+        <p>
+          <strong>Ryan Yen</strong>, CEO of X Orbit.
+        </p>
         <h3>Built on</h3>
         <p>
           X Orbit is built with Electron and Chromium, TypeScript and React. Fonts are open source:

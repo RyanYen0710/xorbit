@@ -11,6 +11,10 @@ export const SITE_URL =
 export const CHROME_STORE_URL = process.env.NEXT_PUBLIC_CHROME_STORE_URL ?? ''
 export const REPO = process.env.NEXT_PUBLIC_GITHUB_REPO ?? ''
 
+/** The separate Support Center site (apps/support-center) where tickets are created. */
+export const SUPPORT_URL =
+  process.env.NEXT_PUBLIC_SUPPORT_URL ?? 'https://xorbit-support-center.vercel.app'
+
 export const NAV = [
   { href: '/features', label: 'Browser' },
   { href: '/search', label: 'Search' },

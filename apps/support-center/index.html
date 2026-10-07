@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Support Center — X Orbit</title>
+    <meta
+      name="description"
+      content="Open a support ticket for X Orbit: report a bug, ask a question or request a feature."
+    />
+    <meta name="theme-color" content="#050505" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/app.css" />
+    <script src="/config.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#ticket">Skip to the ticket form</a>
+    <header class="top">
+      <div class="wrap bar">
+        <a class="brand" href="https://xorbit-browse.vercel.app" aria-label="X Orbit website">
+          <img src="/favicon.svg" alt="" width="22" height="22" />
+          <span>X ORBIT</span>
+        </a>
+        <nav aria-label="Primary">
+          <a href="https://xorbit-browse.vercel.app/download">Download</a>
+          <a href="https://xorbit-browse.vercel.app/support">FAQ</a>
+          <a href="https://xorbit-browse.vercel.app/privacy">Privacy</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <div class="label">SUPPORT CENTER</div>
+        <h1 class="display">HOW CAN<br />WE HELP?</h1>
+        <p class="lede">
+          Open a ticket and we will reply by email. The more detail you give, the faster we can fix
+          it.
+        </p>
+      </section>
+
+      <p id="banner" class="banner" role="status" hidden></p>
+
+      <div class="grid">
+        <div>
+          <form id="ticket" novalidate autocomplete="on">
+            <fieldset>
+              <legend>1 / The problem</legend>
+              <div class="field">
+                <label for="title">Title</label>
+                <input
+                  id="title"
+                  name="title"
+                  maxlength="120"
+                  required
+                  placeholder="One line, e.g. “Downloads panel stays empty”"
+                  aria-describedby="e-title"
+                />
+                <p class="err" id="e-title" role="alert"></p>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="category">What is it about?</label>
+                  <select id="category" name="category" required aria-describedby="e-category">
+                    <option value="">Choose…</option>
+                    <option>Bug or crash</option>
+                    <option>Performance or memory</option>
+                    <option>Website doesn’t work in X Orbit</option>
+                    <option>Passwords, cards &amp; autofill</option>
+                    <option>Downloads &amp; installer</option>
+                    <option>Chrome extension</option>
+                    <option>Privacy question</option>
+                    <option>Feature request</option>
+                    <option>Account or something else</option>
+                  </select>
+                  <p class="err" id="e-category" role="alert"></p>
+                </div>
+                <div class="field">
+                  <label for="product">Which product?</label>
+                  <select id="product" name="product" required aria-describedby="e-product">
+                    <option value="">Choose…</option>
+                    <option>X Orbit for Mac</option>
+                    <option>X Orbit Chrome extension</option>
+                    <option>Orbit Search</option>
+                    <option>The website</option>
+                    <option>Not sure</option>
+                  </select>
+                  <p class="err" id="e-product" role="alert"></p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="impact">How much does it affect you?</label>
+                <select id="impact" name="impact" required aria-describedby="e-impact">
+                  <option value="">Choose…</option>
+                  <option>I can’t use X Orbit (crash, won’t open)</option>
+                  <option>A feature is broken</option>
+                  <option>It works but looks wrong or feels slow</option>
+                  <option>Just a question or suggestion</option>
+                </select>
+                <p class="err" id="e-impact" role="alert"></p>
+              </div>
+              <div class="field">
+                <label for="details">What happened?</label>
+                <textarea
+                  id="details"
+                  name="details"
+                  rows="5"
+                  required
+                  minlength="20"
+                  placeholder="Describe it in your own words. What were you trying to do?"
+                  aria-describedby="e-details"
+                ></textarea>
+                <p class="err" id="e-details" role="alert"></p>
+              </div>
+              <div class="field">
+                <label for="steps">Steps to reproduce <span class="opt">optional</span></label>
+                <textarea
+                  id="steps"
+                  name="steps"
+                  rows="4"
+                  placeholder="1. Open a new tab&#10;2. …&#10;3. …"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label for="expected"
+                  >What did you expect to happen? <span class="opt">optional</span></label
+                >
+                <textarea id="expected" name="expected" rows="2"></textarea>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="frequency">How often? <span class="opt">optional</span></label>
+                  <select id="frequency" name="frequency">
+                    <option value="">Not sure</option>
+                    <option>Every time</option>
+                    <option>Sometimes</option>
+                    <option>Only once</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="url">Page address <span class="opt">optional</span></label>
+                  <input
+                    id="url"
+                    name="url"
+                    type="url"
+                    inputmode="url"
+                    placeholder="https://… (if it’s one website)"
+                    aria-describedby="e-url"
+                  />
+                  <p class="err" id="e-url" role="alert"></p>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>2 / Your setup</legend>
+              <div class="row">
+                <div class="field">
+                  <label for="version">X Orbit version <span class="opt">optional</span></label>
+                  <input
+                    id="version"
+                    name="version"
+                    placeholder="Settings → About X Orbit, e.g. 0.1.0"
+                  />
+                </div>
+                <div class="field">
+                  <label for="system">Computer <span class="opt">optional</span></label>
+                  <input id="system" name="system" placeholder="e.g. MacBook Air, macOS 14" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="browser"
+                  >Browser and version <span class="opt">for the Chrome extension</span></label
+                >
+                <input id="browser" name="browser" placeholder="e.g. Chrome 152" />
+              </div>
+              <div class="check">
+                <input id="diag" name="diag" type="checkbox" />
+                <label for="diag">
+                  Attach basic diagnostic info
+                  <span class="hint" id="diag-hint"
+                    >Sends your browser’s user-agent text, language, screen size and time zone.
+                    Nothing else.</span
+                  >
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>3 / How we reach you</legend>
+              <div class="row">
+                <div class="field">
+                  <label for="name">Name <span class="opt">optional</span></label>
+                  <input id="name" name="name" autocomplete="name" maxlength="80" />
+                </div>
+                <div class="field">
+                  <label for="email">Email</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                    maxlength="200"
+                    placeholder="we reply here"
+                    aria-describedby="e-email"
+                  />
+                  <p class="err" id="e-email" role="alert"></p>
+                </div>
+              </div>
+              <div class="check">
+                <input id="ack" name="ack" type="checkbox" required aria-describedby="e-ack" />
+                <label for="ack">
+                  I have <strong>not</strong> put passwords, card numbers or recovery codes in this
+                  ticket.
+                  <span class="hint">We will never ask for them.</span>
+                </label>
+              </div>
+              <p class="err" id="e-ack" role="alert"></p>
+              <!-- spam trap: real people never see or fill this -->
+              <div class="hp" aria-hidden="true">
+                <label for="website">Leave this empty</label>
+                <input id="website" name="website" tabindex="-1" autocomplete="off" />
+              </div>
+            </fieldset>
+
+            <div class="actions">
+              <button id="send" class="btn" type="submit">Send ticket</button>
+              <p class="privacy">
+                Your ticket is emailed to our support inbox through Web3Forms, a form-to-email
+                service. We use it only to answer you. See our
+                <a href="https://xorbit-browse.vercel.app/privacy">privacy page</a>.
+              </p>
+            </div>
+          </form>
+
+          <section id="done" class="done" hidden aria-live="polite" tabindex="-1">
+            <div class="label">TICKET SENT</div>
+            <p class="ticket-id" id="done-id"></p>
+            <p>
+              Thanks! We emailed nothing automatically, so keep this ID. We will reply to
+              <strong id="done-email"></strong>; check your spam folder if you don’t see us, and
+              quote the ID if you write again.
+            </p>
+            <p>
+              <button id="copy-id" class="btn ghost" type="button">Copy ID</button>
+              <button id="another" class="btn ghost" type="button">Create another ticket</button>
+            </p>
+          </section>
+        </div>
+
+        <aside aria-label="Help with your ticket">
+          <section>
+            <div class="label">WHAT TO INCLUDE</div>
+            <ul id="tips" class="tips"></ul>
+          </section>
+          <section>
+            <div class="label">YOUR TICKETS ON THIS DEVICE</div>
+            <ul id="mine" class="mine"></ul>
+            <p id="mine-empty" class="hint">
+              None yet. A list of what you send is kept in this browser only.
+            </p>
+          </section>
+          <section>
+            <div class="label">SECURITY ISSUE?</div>
+            <p class="hint">
+              Please don’t post vulnerabilities in a ticket. Use the private reporting link in our
+              <a href="https://github.com/RyanYen0710/xorbit/security/policy">security policy</a>.
+            </p>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="wrap foot">
+      <span class="label">X ORBIT · SUPPORT CENTER</span>
+      <span class="label">CHANNEL / BETA</span>
+    </footer>
+  </body>
+</html>

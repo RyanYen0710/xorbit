@@ -1,0 +1,13 @@
+{
+  "name": "@orbit/support-center",
+  "version": "0.1.0",
+  "private": true,
+  "description": "X Orbit Support Center: static ticket form (no build step).",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node scripts/e2e.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}

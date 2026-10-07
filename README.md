@@ -10,6 +10,7 @@
 apps/
   browser/   Electron desktop browser (TypeScript, React, electron-vite)
   extension/ Chrome extension (Manifest V3): Orbit new tab, Mission Control side panel, Spaces as tab groups, Orbit Bar overlay
+  support-center/ Support Center: static ticket form (own Vercel project, no build step)
   website/   Public site: Next.js 16 (/, /download, /features, /search, /themes, /privacy, /about, /changelog, /support)
   search/    Orbit Search: tiny Node server + original search UI, pluggable official-API backends
 packages/
