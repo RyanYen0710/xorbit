@@ -5,6 +5,15 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.3',
+    channel: 'Beta',
+    items: [
+      'Automatic updates: when you open X Orbit it checks for a new version and installs it by itself, with a progress bar showing the speed and size. Turn it off in Settings.',
+      'Focus mode has an always-visible Exit focus button, and the sidebar and top bar now slide smoothly.',
+      'Bookmark import finds Chrome bookmarks saved with a Google account and in every profile.',
+    ],
+  },
+  {
     v: '0.1.2',
     channel: 'Beta',
     items: [

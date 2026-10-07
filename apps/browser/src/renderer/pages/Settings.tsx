@@ -533,7 +533,7 @@ export default function Settings() {
           <button className="btn" onClick={() => act('updateCheck')}>
             CHECK FOR UPDATES
           </button>
-          {s.update.includes('restart') && (
+          {s.update.includes('restart to install') && (
             <button className="btn" onClick={() => act('updateInstall')}>
               RESTART
             </button>
@@ -541,7 +541,7 @@ export default function Settings() {
         </Row>
         <Row
           label="Automatically install updates"
-          hint="Off: X Orbit tells you when a new version is out and you download it from the website. Automatic install needs a code-signed build."
+          hint="On: when you open X Orbit it checks for a new version and, if there is one, downloads and installs it by itself with a progress bar. Off: it only tells you, and you choose when to update."
         >
           <Toggle
             on={set.autoUpdate}

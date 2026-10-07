@@ -238,6 +238,51 @@ try {
   )
   assert.match(await act('importBookmarks', { browser: 'chrome' }), /No new bookmarks/)
   assert.equal((await state()).pins.length, pinsBefore + 2) // javascript: bookmark skipped
+  // newer Chrome keeps a signed-in account's bookmarks in AccountBookmarks, and people have several profiles
+  {
+    const dir = path.join(tmp, 'ChromeLike')
+    const root = (name, urls) => ({
+      roots: {
+        bookmark_bar: {
+          name,
+          type: 'folder',
+          children: urls.map((u) => ({ type: 'url', name: u, url: u })),
+        },
+      },
+    })
+    fs.mkdirSync(path.join(dir, 'Default'), { recursive: true })
+    fs.mkdirSync(path.join(dir, 'Profile 1'), { recursive: true })
+    fs.mkdirSync(path.join(dir, 'System Profile'), { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'Default', 'AccountBookmarks'),
+      JSON.stringify(root('Account', ['https://acct.example/', 'https://dup.example/'])),
+    )
+    fs.writeFileSync(
+      path.join(dir, 'Profile 1', 'Bookmarks'),
+      JSON.stringify(root('Local', ['https://dup.example/', 'https://local.example/'])),
+    )
+    fs.writeFileSync(
+      path.join(dir, 'System Profile', 'Bookmarks'),
+      JSON.stringify(root('X', ['https://system.example/'])),
+    )
+    await W(
+      `process.env.ORBIT_BOOKMARKS_FILE = ''; process.env.ORBIT_BOOKMARKS_DIR = arg; return 1`,
+      dir,
+    )
+    assert.match(
+      await act('importBookmarks', { browser: 'chrome' }),
+      /Imported 3 bookmarks from Chrome/,
+    )
+    await W(`process.env.ORBIT_BOOKMARKS_DIR = arg; return 1`, path.join(tmp, 'nothing-here'))
+    assert.match(await act('importBookmarks', { browser: 'chrome' }), /find Chrome bookmarks/)
+    await W(
+      `process.env.ORBIT_BOOKMARKS_DIR = ''; process.env.ORBIT_BOOKMARKS_FILE = arg; return 1`,
+      bm,
+    )
+    log(
+      'bookmark import reads every Chrome profile and AccountBookmarks, skips System Profile and duplicates',
+    )
+  }
   assert.equal(await act('addBookmark', { url: 'example.com/page', title: 'Ex' }), 'Added')
   assert.equal(await act('addBookmark', { url: 'example.com/page' }), 'Already bookmarked')
   assert.match(await act('addBookmark', { url: 'javascript:alert(1)' }), /doesn.t look like/)
@@ -355,10 +400,42 @@ try {
   assert.ok(s.split)
   await act('splitTab')
   assert.equal((await state()).split, null)
-  await act('toggleFocus')
-  assert.equal((await state()).focus, true)
-  await act('toggleFocus')
-  log('split view and focus mode toggle')
+  {
+    // Focus mode: the rail slides away smoothly, an "Exit focus" button is always there, and it brings everything back
+    const full = (await state()).railPx
+    assert.ok(full >= 64)
+    await act('toggleFocus')
+    assert.equal((await state()).focus, true)
+    let sawMiddle = false
+    for (let i = 0; i < 30; i++) {
+      const px = (await state()).railPx
+      if (px > 4 && px < full) sawMiddle = true
+      if (px === 4) break
+      await new Promise((r) => setTimeout(r, 15))
+    }
+    await until(
+      async () => (await state()).railPx === 4 && (await state()).topPx === 0,
+      'rail tucked away',
+    )
+    assert.ok(sawMiddle, 'the rail glided instead of jumping')
+    assert.equal((await state()).pageRect.x, 4)
+    await until(
+      () =>
+        W(
+          `return w.overlay.webContents.executeJavaScript("!!document.querySelector('.exit-focus')")`,
+        ),
+      'exit focus button shown',
+    )
+    await W(
+      `return w.overlay.webContents.executeJavaScript("document.querySelector('.exit-focus').click()")`,
+    )
+    await until(
+      async () => (await state()).focus === false && (await state()).railPx === full,
+      'rail back',
+    )
+    assert.equal((await state()).topPx, 36)
+    log('Focus mode: the rail slides away smoothly; "Exit focus" always brings it back, sliding in')
+  }
 
   // private window: separate, no history
   const before = await W('return o.history.items.length')

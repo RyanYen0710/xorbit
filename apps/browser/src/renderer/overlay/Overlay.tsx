@@ -127,16 +127,31 @@ function Compact({ s }: { s: UIState }) {
   const tab = s.tabs.find((t) => t.id === s.activeTabId)
   const host = tab ? hostOf(tab.url) : ''
   const secure = tab?.url.startsWith('https:')
+  const mac = s.platform === 'darwin'
   return (
-    <button
-      className="pill"
-      onClick={() => act('overlay', { mode: 'bar' })}
-      aria-label="Open Orbit Bar"
-    >
-      {host ? <Icon n={secure ? 'lock' : 'unlock'} size={13} /> : <Icon n="search" size={13} />}
-      <span className="pill-text">{host || 'Search or enter address'}</span>
-      <kbd>{kbdLabel('Mod+L', s.platform === 'darwin')}</kbd>
-    </button>
+    <div className="pill-row">
+      {s.settings.orbitBar && (
+        <button
+          className="pill"
+          onClick={() => act('overlay', { mode: 'bar' })}
+          aria-label="Open Orbit Bar"
+        >
+          {host ? <Icon n={secure ? 'lock' : 'unlock'} size={13} /> : <Icon n="search" size={13} />}
+          <span className="pill-text">{host || 'Search or enter address'}</span>
+          <kbd>{kbdLabel('Mod+L', mac)}</kbd>
+        </button>
+      )}
+      {s.focus && (
+        <button
+          className="exit-focus"
+          onClick={() => act('toggleFocus')}
+          aria-label="Exit Focus mode and bring back the sidebar"
+          title={`Exit Focus mode (${kbdLabel('Mod+Shift+F', mac)})`}
+        >
+          <Icon n="focus" size={14} /> Exit focus
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -271,6 +286,90 @@ function Find({ s }: { s: UIState }) {
       <button className="icon-btn" aria-label="Close find" onClick={() => act('closeOverlay')}>
         <Icon n="close" size={14} />
       </button>
+    </div>
+  )
+}
+
+const MB = 1048576
+const mb = (n: number) => `${(n / MB).toFixed(1)} MB`
+const rate = (n: number) =>
+  n >= MB ? `${(n / MB).toFixed(1)} MB/s` : `${Math.round(n / 1024)} KB/s`
+
+/** The self-update card: a smooth progress bar with the live speed and size underneath. */
+function UpdateCard({ s }: { s: UIState }) {
+  const u = s.updater
+  const pct = u.total ? Math.min(100, (u.received / u.total) * 100) : 0
+  const working = ['downloading', 'verifying', 'installing', 'restarting'].includes(u.phase)
+  const title =
+    u.phase === 'available' || u.phase === 'unsupported'
+      ? `X Orbit ${u.version} is available`
+      : u.phase === 'error'
+        ? 'Update problem'
+        : u.phase === 'downloading'
+          ? `Updating X Orbit to ${u.version}`
+          : u.phase === 'verifying'
+            ? 'Checking the download…'
+            : u.phase === 'installing'
+              ? 'Installing…'
+              : 'Restarting X Orbit…'
+  return (
+    <div className="upd" role="status" aria-live="polite">
+      <div className="upd-head">
+        <span className="upd-title">{title}</span>
+        {u.phase === 'downloading' && <span className="upd-pct">{Math.floor(pct)}%</span>}
+      </div>
+      {working && (
+        <div
+          className="upd-bar"
+          role="progressbar"
+          aria-label="Update progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={u.phase === 'downloading' ? Math.floor(pct) : 100}
+        >
+          <div
+            className="upd-fill"
+            data-busy={u.phase !== 'downloading'}
+            style={{ width: u.phase === 'downloading' ? `${pct}%` : '100%' }}
+          />
+        </div>
+      )}
+      {u.phase === 'downloading' && (
+        <div className="upd-meta">
+          <span>{u.speed ? rate(u.speed) : 'Starting…'}</span>
+          <span>
+            {mb(u.received)} / {mb(u.total)}
+          </span>
+        </div>
+      )}
+      {(u.phase === 'unsupported' || u.phase === 'error') && <p className="upd-msg">{u.message}</p>}
+      <div className="upd-actions">
+        {u.phase === 'available' && (
+          <button className="btn" onClick={() => act('updateNow')}>
+            Update now
+          </button>
+        )}
+        {u.phase === 'unsupported' && (
+          <button className="btn" onClick={() => act('updateManual')}>
+            Download
+          </button>
+        )}
+        {u.phase === 'error' && (
+          <>
+            <button className="btn" onClick={() => act('updateRetry')}>
+              Try again
+            </button>
+            <button className="btn ghost" onClick={() => act('updateManual')}>
+              Download manually
+            </button>
+          </>
+        )}
+        {(u.phase === 'available' || u.phase === 'unsupported' || u.phase === 'error') && (
+          <button className="btn ghost" onClick={() => act('updateDismiss')}>
+            Later
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -437,6 +536,8 @@ export function Overlay() {
       return <Site s={s} />
     case 'find':
       return <Find s={s} />
+    case 'update':
+      return <UpdateCard s={s} />
     case 'dialog':
       return <Dialog s={s} />
     case 'menu':

@@ -7,7 +7,13 @@ import { OrbitWindow } from './window'
 import { TAB_PAGES, isInternalUrl, pageOf } from './internal'
 import * as hist from './history'
 import { clearDownloads, downloadOp } from './downloads'
-import { checkForUpdates, downloadUpdate, installUpdate } from './updater'
+import {
+  checkForUpdates,
+  dismissUpdate,
+  downloadUpdate,
+  installUpdate,
+  manualDownloadUrl,
+} from './updater'
 import {
   clearData,
   createSpace,
@@ -464,9 +470,19 @@ const ACT: Record<string, Handler> = {
     app.setAsDefaultProtocolClient('http')
     app.setAsDefaultProtocolClient('https')
   },
-  updateCheck: () => checkForUpdates(),
+  updateCheck: () => checkForUpdates(true),
   updateDownload: () => downloadUpdate(),
   updateInstall: () => installUpdate(),
+  updateNow: () => downloadUpdate(),
+  updateRetry: async () => {
+    await checkForUpdates(true)
+    downloadUpdate()
+  },
+  updateDismiss: () => dismissUpdate(),
+  updateManual: (w) => {
+    dismissUpdate()
+    w.newTab({ url: manualDownloadUrl() })
+  },
 }
 const byWindows = () => new Set(byContents.values())
 

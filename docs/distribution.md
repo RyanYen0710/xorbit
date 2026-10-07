@@ -42,7 +42,7 @@ Set `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` (and optionally `WIN_PUBLISHER`). Un
 Channels: **stable** → releases not marked pre-release, **beta** → pre-releases (tag `v0.2.0-beta.1`), **developer** → alpha tags.
 The channel is chosen in Settings → About X Orbit.
 
-Auto-update on macOS requires a **signed** app. Until you have a certificate, updates are manual downloads.
+On macOS X Orbit updates itself (see `apps/browser/src/main/updater.ts`): on launch it reads `latest-mac.yml` from the newest GitHub release, downloads the `.zip` with a progress card, checks its SHA-512 and signature, swaps the app in place and reopens. It works without a paid certificate because the app downloads the file itself (no browser quarantine). Every release must therefore include `latest-mac.yml` and the `.zip`. It needs a normal, writable install in Applications; otherwise the card links to the download page. Tested end to end by `apps/browser/scripts/update.e2e.mjs`.
 
 ## Website
 

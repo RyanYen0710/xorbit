@@ -17,7 +17,7 @@ import { canon, isInternalUrl, isTabPage, pageOf } from './internal'
 import { sessionFor, setupSession } from './session'
 import { byContents, windows } from './registry'
 import * as hist from './history'
-import { checkStatus } from './updater'
+import { checkStatus, updaterState } from './updater'
 
 const PRELOAD = path.join(__dirname, '../preload/index.js')
 const SHELL_PREFS = {
@@ -31,6 +31,7 @@ const RAIL_COLLAPSED = 64
 const TOP_H = 36
 const GAP = 6
 const BAR = { w: 380, h: 44, bottom: 18 }
+const EXIT_W = 112
 const PRIVATE_THEME: Partial<Theme> = {
   name: 'ORBIT PRIVATE',
   mode: 'dark',
@@ -97,6 +98,13 @@ export class OrbitWindow {
   private saveTimer: NodeJS.Timeout | null = null
   private closing = false
   private rect = { x: 0, y: 0, width: 0, height: 0 }
+  /** Rail width and top-strip height as currently drawn; they glide to their goals instead of jumping. */
+  railPx = 0
+  topPx = 0
+  private chromeGoal = { rail: -1, top: -1 }
+  private chromeAnim: NodeJS.Timeout | null = null
+  private peekWatch: NodeJS.Timeout | null = null
+  private peekOutSince = 0
 
   constructor(opts: { private?: boolean; restore?: boolean } = {}) {
     this.privateId = opts.private ? ++privateCounter : null
@@ -152,7 +160,7 @@ export class OrbitWindow {
     })
     this.win.on('closed', () => this.dispose())
     this.win.on('focus', () =>
-      this.overlayMode !== 'compact' && this.overlayMode !== 'none'
+      this.overlayMode !== 'compact' && this.overlayMode !== 'none' && this.overlayMode !== 'update'
         ? this.overlay.webContents.focus()
         : this.focusPage(),
     )
@@ -243,13 +251,18 @@ export class OrbitWindow {
       },
       pageRect: this.rect,
       update: checkStatus(),
+      updater: updaterState(),
+      railPx: this.railPx,
+      topPx: this.topPx,
       find: this.find,
     }
   }
 
   /** Coalesce state pushes to one per frame. */
   changed() {
-    if (this.pending || this.win.isDestroyed()) return
+    if (this.win.isDestroyed()) return
+    this.syncUpdateCard()
+    if (this.pending) return
     this.pending = setTimeout(() => {
       this.pending = null
       if (this.win.isDestroyed()) return
@@ -279,17 +292,56 @@ export class OrbitWindow {
     if (this.win.isDestroyed()) return
     const [W, H] = this.win.getContentSize()
     this.chrome.setBounds({ x: 0, y: 0, width: W, height: H })
-    const s = db.data.settings
-    const railW = this.chromeHidden
+    const st = db.data.settings
+    const rail = this.chromeHidden
       ? this.htmlFs
         ? 0
         : 4
       : this.railExpanded
-        ? s.railWidth
+        ? st.railWidth
         : RAIL_COLLAPSED
     const top = this.chromeHidden ? 0 : TOP_H
-    const right = s.railPosition === 'right'
-    this.rect = { x: right ? 0 : railW, y: top, width: W - railW, height: H - top }
+    const g = this.chromeGoal
+    if (g.rail < 0 || this.htmlFs || !st.animations || !this.win.isVisible()) {
+      this.stopChromeAnim()
+      this.chromeGoal = { rail, top }
+      this.railPx = rail
+      this.topPx = top
+    } else if (g.rail !== rail || g.top !== top) {
+      this.chromeGoal = { rail, top }
+      this.animateChrome(rail, top)
+    }
+    this.applyChrome()
+  }
+  private stopChromeAnim() {
+    if (this.chromeAnim) clearInterval(this.chromeAnim)
+    this.chromeAnim = null
+  }
+  /** Slides the rail and top strip to their new size (about 0.2 s, easing out) so nothing pops. */
+  private animateChrome(rail: number, top: number) {
+    this.stopChromeAnim()
+    const from = { rail: this.railPx, top: this.topPx }
+    const t0 = Date.now()
+    this.chromeAnim = setInterval(() => {
+      if (this.win.isDestroyed()) return this.stopChromeAnim()
+      const k = Math.min(1, (Date.now() - t0) / 200)
+      const e = 1 - Math.pow(1 - k, 3)
+      this.railPx = Math.round(from.rail + (rail - from.rail) * e)
+      this.topPx = Math.round(from.top + (top - from.top) * e)
+      this.applyChrome()
+      if (k >= 1) this.stopChromeAnim()
+    }, 16)
+  }
+  private applyChrome() {
+    if (this.win.isDestroyed()) return
+    const [W, H] = this.win.getContentSize()
+    const right = db.data.settings.railPosition === 'right'
+    this.rect = {
+      x: right ? 0 : this.railPx,
+      y: this.topPx,
+      width: W - this.railPx,
+      height: H - this.topPx,
+    }
     this.syncViews()
     this.layoutOverlay()
     this.changed()
@@ -333,14 +385,22 @@ export class OrbitWindow {
     let b = { x: 0, y: 0, width: W, height: H }
     let visible = true
     if (m === 'compact' || m === 'none') {
-      const w = Math.min(BAR.w, r.width - 24)
+      // In Focus mode an "Exit focus" button sits beside the Orbit Bar pill (or alone when the pill is off).
+      const bar = db.data.settings.orbitBar
+      const pill = bar ? Math.min(BAR.w, r.width - 24) : 0
+      const w = pill + (this.focus ? (bar ? 8 : 0) + EXIT_W : 0)
       b = {
         x: r.x + Math.round((r.width - w) / 2),
         y: H - BAR.bottom - BAR.h,
         width: w,
         height: BAR.h,
       }
-      visible = m === 'compact' && db.data.settings.orbitBar && !this.htmlFs
+      visible = m === 'compact' && (bar || this.focus) && !this.htmlFs
+    } else if (m === 'update') {
+      const big = ['available', 'unsupported', 'error'].includes(updaterState().phase)
+      const w = Math.min(360, r.width - 32)
+      const h = big ? 156 : 112
+      b = { x: r.x + r.width - w - 16, y: H - h - 16, width: w, height: h }
     } else if (m === 'find') {
       b = { x: r.x + r.width - 396, y: r.y + 12, width: 380, height: 52 }
     }
@@ -356,7 +416,7 @@ export class OrbitWindow {
     this.overlayText = text
     this.overlaySeq++
     this.layoutOverlay()
-    if (mode === 'compact' || mode === 'none') this.focusPage()
+    if (mode === 'compact' || mode === 'none' || mode === 'update') this.focusPage()
     else this.overlay.webContents.focus()
     this.changed()
   }
@@ -412,13 +472,24 @@ export class OrbitWindow {
     const r = await this.overlayAsk('menu', (id) => (this.menuSpec = { id, x, y, items }))
     if (r.value) acts.get(r.value)?.()
   }
+  /** The update card shows in the overlay's resting slot while an update is in progress, and gives way to anything else. */
+  private syncUpdateCard() {
+    if (!this.overlay || this.overlay.webContents.isDestroyed()) return
+    const want = updaterState().visible
+    if (want && this.overlayMode === 'compact') this.setOverlay('update')
+    else if (!want && this.overlayMode === 'update') this.setOverlay('compact')
+  }
   closeOverlay() {
     if (this.overlayMode === 'find')
       this.activeTab?.view?.webContents.stopFindInPage('clearSelection')
     this.setOverlay('compact')
   }
   focusPage() {
-    if (this.overlayMode === 'compact' || this.overlayMode === 'none')
+    if (
+      this.overlayMode === 'compact' ||
+      this.overlayMode === 'none' ||
+      this.overlayMode === 'update'
+    )
       this.activeTab?.view?.webContents.focus()
   }
   toggleRail() {
@@ -428,7 +499,40 @@ export class OrbitWindow {
   toggleFocus() {
     this.focus = !this.focus
     this.peek = false
+    if (this.focus) this.watchPeek()
     this.relayout()
+  }
+  /**
+   * In Focus mode the page covers the window, so it never sees the mouse near the edge. Watch the pointer instead:
+   * touching the rail's edge slides the Rail and top bar back in; moving away lets them slide out again.
+   */
+  private watchPeek() {
+    if (this.peekWatch) return
+    this.peekWatch = setInterval(() => {
+      if (!this.focus || this.win.isDestroyed()) {
+        if (this.peekWatch) clearInterval(this.peekWatch)
+        this.peekWatch = null
+        return
+      }
+      if (!this.win.isFocused() || this.overlayMode !== 'compact') return
+      const c = screen.getCursorScreenPoint()
+      const b = this.win.getContentBounds()
+      const [W, H] = this.win.getContentSize()
+      const x = c.x - b.x
+      const y = c.y - b.y
+      const inside = x >= 0 && y >= 0 && x < W && y < H
+      const edge = db.data.settings.railPosition === 'right' ? W - x : x
+      if (inside && edge <= (this.peek ? this.railPx + 12 : 7)) {
+        this.peekOutSince = 0
+        if (!this.peek) this.setPeek(true)
+      } else if (this.peek) {
+        if (!this.peekOutSince) this.peekOutSince = Date.now()
+        else if (Date.now() - this.peekOutSince > 350) {
+          this.peekOutSince = 0
+          this.setPeek(false)
+        }
+      }
+    }, 80)
   }
   setPeek(on: boolean) {
     if (this.focus && this.peek !== on) {
@@ -472,7 +576,7 @@ export class OrbitWindow {
     t.archived = false
     this.activeSpaceId = t.spaceId
     if (this.split && id !== this.split.a && id !== this.split.b) this.split = null
-    if (this.overlayMode !== 'compact') this.setOverlay('compact')
+    if (this.overlayMode !== 'compact' && this.overlayMode !== 'update') this.setOverlay('compact')
     this.relayout()
     this.focusPage()
   }
@@ -1015,6 +1119,8 @@ export class OrbitWindow {
   }
 
   private dispose() {
+    this.stopChromeAnim()
+    if (this.peekWatch) clearInterval(this.peekWatch)
     for (const t of this.tabs) this.destroyView(t)
     for (const v of [this.chrome, this.overlay]) {
       byContents.delete(v.webContents.id)

@@ -351,6 +351,8 @@ function TopStrip({ s }: { s: UIState }) {
     <header
       className="top"
       style={{
+        transform: `translateY(${s.topPx - 36}px)`,
+        opacity: s.topPx / 36,
         left: s.pageRect.x,
         width: s.pageRect.width,
         paddingRight: win && s.settings.railPosition === 'left' ? 150 : 12,
@@ -479,11 +481,19 @@ function SplitDivider({ s }: { s: UIState }) {
 
 export function Chrome() {
   const s = useOrbit()!
-  const hidden = s.focus && !s.peek
-  const railW = hidden ? 4 : s.railExpanded ? s.settings.railWidth : 64
+  // Rail and top strip stay drawn while they glide in or out; only when fully tucked away is just the edge left.
+  const hidden = s.focus && !s.peek && s.railPx <= 4 && s.topPx <= 0
+  const railW = s.railPx
+  const full = s.railExpanded ? s.settings.railWidth : 64
+  const sliding = s.railPx !== full
   const noTab = !s.tabs.some((t) => t.id === s.activeTabId)
   return (
-    <div className="shell" style={{ ['--rail' as string]: railW + 'px' }} data-hidden={hidden}>
+    <div
+      className="shell"
+      style={{ ['--rail' as string]: railW + 'px', ['--rail-full' as string]: full + 'px' }}
+      data-hidden={hidden}
+      data-sliding={sliding}
+    >
       {hidden ? (
         <div
           className="peek-strip"

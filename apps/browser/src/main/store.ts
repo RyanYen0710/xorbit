@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   askDownload: false,
   offerToSavePasswords: true,
-  autoUpdate: false, // unsigned macOS builds can't self-install; turn on once the app is signed
+  autoUpdate: true,
   channel: 'beta',
 }
 
@@ -56,6 +56,7 @@ export interface SavedTab {
   archived: boolean
 }
 export interface Persisted {
+  migrated?: number
   settings: Settings
   spaces: Space[]
   pins: Pin[]
@@ -128,6 +129,11 @@ export function initStore() {
       ...DEFAULT_SETTINGS.permissionDefaults,
       ...d.settings?.permissionDefaults,
     },
+  }
+  // v2: X Orbit now installs its own updates; earlier builds saved "off" because they could not.
+  if ((d.migrated ?? 0) < 2) {
+    d.settings.autoUpdate = true
+    d.migrated = 2
   }
   if (!d.spaces?.length) d.spaces = [DEFAULT_SPACE]
   // anything that was mid-download when we last quit did not finish

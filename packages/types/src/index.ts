@@ -105,7 +105,29 @@ export interface Settings {
 }
 
 export type OverlayMode =
-  'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find' | 'dialog' | 'menu'
+  'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find' | 'dialog' | 'menu' | 'update'
+
+/** Where the self-updater is: drives the update card (progress bar, speed, size). */
+export type UpdatePhase =
+  | 'idle'
+  | 'checking'
+  | 'uptodate'
+  | 'available'
+  | 'downloading'
+  | 'verifying'
+  | 'installing'
+  | 'restarting'
+  | 'unsupported'
+  | 'error'
+export interface UpdaterState {
+  phase: UpdatePhase
+  version: string
+  received: number // bytes
+  total: number // bytes
+  speed: number // bytes per second
+  message: string
+  visible: boolean // show the update card
+}
 
 /** An X Orbit confirmation box (replaces the system dialog). */
 export interface DialogSpec {
@@ -157,6 +179,9 @@ export interface UIState {
   }
   pageRect: { x: number; y: number; width: number; height: number }
   update: string
+  updater: UpdaterState
+  railPx: number
+  topPx: number
   find: { active: number; total: number }
 }
 
