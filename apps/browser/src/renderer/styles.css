@@ -1585,3 +1585,108 @@ html[data-compact='true'] {
     gap: 4px;
   }
 }
+
+/* X Orbit dialogs and pop-up menus (replace system dialogs) */
+.dlg-scrim {
+  align-items: center;
+  padding: 20px;
+}
+.dlg {
+  width: min(420px, 100%);
+  background: var(--orbit-bar);
+  color: var(--orbit-text);
+  border: 1px solid var(--orbit-border-strong);
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  animation: rise var(--orbit-motion) var(--orbit-ease);
+}
+.dlg-title {
+  margin: 0;
+  font: 600 16px/1.35 var(--orbit-font);
+}
+.dlg-msg {
+  margin: 8px 0 0;
+  color: var(--orbit-text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dlg-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--orbit-text-2);
+}
+.dlg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.dlg-actions .btn {
+  min-width: 84px;
+}
+.dlg-actions .btn[data-kind='ghost'] {
+  background: transparent;
+  color: var(--orbit-text);
+  border-color: var(--orbit-border-strong);
+}
+.dlg-actions .btn[data-kind='danger'] {
+  background: #d8574a;
+  border-color: #d8574a;
+  color: #fff;
+}
+.pm-scrim {
+  background: transparent;
+  animation: none;
+}
+.pm {
+  position: fixed;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--orbit-bar);
+  border: 1px solid var(--orbit-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  animation: rise var(--orbit-motion-fast) var(--orbit-ease);
+}
+.pm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  background: none;
+  border: 0;
+  border-radius: var(--orbit-radius-md);
+  color: var(--orbit-text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: default;
+}
+.pm-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-item:hover:not(:disabled),
+.pm-item:focus-visible {
+  background: var(--orbit-tab-active);
+  outline: none;
+}
+.pm-item:disabled {
+  color: var(--orbit-muted);
+}
+.pm-sep {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--orbit-border);
+}

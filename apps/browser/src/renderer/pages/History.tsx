@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { HistoryEntry } from '@orbit/types'
 import { Icon } from '../icons'
-import { act, hostOf, query } from '../state'
+import { act, confirmBox, hostOf, query } from '../state'
 import { Empty, Page } from './shared'
 
 const DAY = 86_400_000
@@ -56,7 +56,14 @@ export default function History() {
         </button>
         <button
           className="btn ghost"
-          onClick={() => confirm('Delete all history?') && clear('all')}
+          onClick={() =>
+            confirmBox({
+              title: 'Delete all history?',
+              message: 'Every page in your browsing history will be removed.',
+              ok: 'Delete all',
+              danger: true,
+            }).then((ok) => (ok ? clear('all') : undefined))
+          }
         >
           Clear all
         </button>

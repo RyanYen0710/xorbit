@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { act, query, useOrbit } from '../state'
+import { act, confirmBox, query, useOrbit } from '../state'
 import { Row, Toggle } from './shared'
 
 interface Status {
@@ -133,7 +133,14 @@ export function PasswordsSection() {
             <button
               className="btn ghost"
               onClick={async () => {
-                if (confirm(`Delete the saved password for ${host(l.origin)}?`)) {
+                if (
+                  await confirmBox({
+                    title: `Delete the saved password for ${host(l.origin)}?`,
+                    message: 'This cannot be undone.',
+                    ok: 'Delete',
+                    danger: true,
+                  })
+                ) {
                   await act('vaultDeleteLogin', { id: l.id })
                   void refresh()
                 }
@@ -252,7 +259,14 @@ export function PaymentsSection() {
             <button
               className="btn ghost"
               onClick={async () => {
-                if (confirm(`Delete ${c.brand} ending ${c.last4}?`)) {
+                if (
+                  await confirmBox({
+                    title: `Delete ${c.brand} ending ${c.last4}?`,
+                    message: 'This cannot be undone.',
+                    ok: 'Delete',
+                    danger: true,
+                  })
+                ) {
                   await act('vaultDeleteCard', { id: c.id })
                   void refresh()
                 }

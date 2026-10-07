@@ -374,6 +374,64 @@ try {
   log('private window browses without writing history')
 
   // untrusted callers: a web page must not reach the privileged API
+  // X Orbit's own confirmation box and pop-up menu (no system dialogs), driven through the real overlay page
+  {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+    const click = (sel) =>
+      W(
+        `return w.overlay.webContents.executeJavaScript(${JSON.stringify(`document.querySelector(${JSON.stringify(sel)}).click()`)})`,
+      )
+    await W(
+      `globalThis.__d = w.confirm({ title: 'Delete all history?', message: 'Gone for good.', checkbox: 'Remember', buttons: [{ label: 'Cancel', value: 'cancel', kind: 'ghost' }, { label: 'Delete', value: 'ok', kind: 'danger' }] }); return 1`,
+    )
+    await until(async () => (await state()).overlay.mode === 'dialog', 'dialog shown')
+    await sleep(150)
+    assert.equal(
+      await W(
+        `return w.overlay.webContents.executeJavaScript("document.querySelector('.dlg-title').textContent + '|' + document.activeElement.textContent")`,
+      ),
+      'Delete all history?|Cancel', // a destructive question starts on the safe button
+    )
+    await click('.dlg-actions .btn[data-kind="danger"]')
+    assert.deepEqual(await W(`return await globalThis.__d`), { value: 'ok', checked: false })
+    await until(async () => (await state()).overlay.mode === 'compact', 'dialog closed')
+    await W(
+      `globalThis.__d = w.confirm({ title: 'Allow?', message: '', buttons: [{ label: 'No', value: 'no' }, { label: 'Yes', value: 'yes', kind: 'primary' }] }); return 1`,
+    )
+    await until(async () => (await state()).overlay.mode === 'dialog', 'second dialog shown')
+    await sleep(200)
+    await W(
+      `return w.overlay.webContents.executeJavaScript("document.querySelector('.dlg').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))")`,
+    )
+    assert.equal((await W(`return await globalThis.__d`)).value, null) // Esc cancels
+    log('confirmation boxes are X Orbit overlays: safe button focused, buttons answer, Esc cancels')
+
+    await W(
+      `globalThis.__m = ''; w.popup([{ label: 'Alpha', click: () => (globalThis.__m += 'A') }, { type: 'separator' }, { label: 'More', submenu: [{ label: 'Beta', click: () => (globalThis.__m += 'B') }] }, { label: 'Off', enabled: false }], { x: 100000, y: 100000 }); return 1`,
+    )
+    await until(async () => (await state()).overlay.mode === 'menu', 'menu shown')
+    await sleep(150)
+    const inside = await W(
+      `return w.overlay.webContents.executeJavaScript("(() => { const r = document.querySelector('.pm').getBoundingClientRect(); return r.right <= innerWidth && r.bottom <= innerHeight && r.left >= 0 && r.top >= 0 })()")`,
+    )
+    assert.equal(inside, true) // a menu asked for far off-screen is pulled back inside the window
+    await click('.pm-item:nth-of-type(1)')
+    await until(async () => (await state()).overlay.mode === 'compact', 'menu closed')
+    assert.equal(await W(`return globalThis.__m`), 'A')
+    await W(
+      `w.popup([{ label: 'More', submenu: [{ label: 'Beta', click: () => (globalThis.__m += 'B') }] }], { x: 40, y: 40 }); return 1`,
+    )
+    await until(async () => (await state()).overlay.mode === 'menu', 'submenu menu shown')
+    await sleep(100)
+    await click('.pm-item')
+    await sleep(100)
+    await W(
+      `return w.overlay.webContents.executeJavaScript("[...document.querySelectorAll('.pm-item')].find(b => b.textContent === 'Beta').click()")`,
+    )
+    await until(async () => (await W(`return globalThis.__m`)) === 'AB', 'submenu item ran')
+    log('pop-up menus are X Orbit overlays: items, submenus and off-screen clamping work')
+  }
+
   const leaked = await W(
     `const t = w.tabs.find(t => t.url.startsWith('http') && t.view); return t.view.webContents.executeJavaScript('typeof window.orbit')`,
   )

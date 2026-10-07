@@ -1,4 +1,4 @@
-import { app, dialog, session, type Session, type WebContents } from 'electron'
+import { app, session, type Session, type WebContents } from 'electron'
 import type { PermissionKey, PermissionValue } from '@orbit/types'
 import { db } from './store'
 import { handleOrbitProtocol } from './internal'
@@ -66,20 +66,18 @@ function hookPermissions(ses: Session) {
     if (ds.includes('block')) return cb(false)
     if (ds.every((d) => d === 'allow')) return cb(true)
     const owner = wc && byContents.get(wc.id)
-    const opts = {
-      type: 'question' as const,
-      buttons: ['Allow', 'Block'],
-      defaultId: 1,
-      cancelId: 1,
-      message: `${new URL(origin).host} wants to use ${keys.map((k) => LABEL[k]).join(' and ')}`,
-      detail: 'You can change this later in the site panel.',
-      checkboxLabel: 'Remember my choice for this site',
-    }
-    const r = owner
-      ? await dialog.showMessageBox(owner.win, opts)
-      : await dialog.showMessageBox(opts)
-    const allow = r.response === 0
-    if (r.checkboxChecked) {
+    if (!owner) return cb(false)
+    const r = await owner.confirm({
+      title: `${new URL(origin).host} wants to use ${keys.map((k) => LABEL[k]).join(' and ')}`,
+      message: 'You can change this later in the site panel.',
+      checkbox: 'Remember my choice for this site',
+      buttons: [
+        { label: 'Block', value: 'block', kind: 'ghost' },
+        { label: 'Allow', value: 'allow', kind: 'primary' },
+      ],
+    })
+    const allow = r.value === 'allow'
+    if (r.checked) {
       const rec = (db.data.sitePerms[origin] ??= {})
       for (const k of keys) rec[k] = allow ? 'allow' : 'block'
       db.save()

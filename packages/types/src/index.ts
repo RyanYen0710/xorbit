@@ -104,7 +104,31 @@ export interface Settings {
   channel: 'stable' | 'beta' | 'developer'
 }
 
-export type OverlayMode = 'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find'
+export type OverlayMode =
+  'none' | 'compact' | 'bar' | 'palette' | 'site' | 'find' | 'dialog' | 'menu'
+
+/** An X Orbit confirmation box (replaces the system dialog). */
+export interface DialogSpec {
+  id: string
+  title: string
+  message: string
+  buttons: { label: string; value: string; kind?: 'primary' | 'danger' | 'ghost' }[]
+  checkbox?: string
+}
+/** An X Orbit pop-up menu (replaces the system context menu). */
+export interface MenuEntry {
+  id: string
+  label: string
+  disabled?: boolean
+  separator?: boolean
+  children?: MenuEntry[]
+}
+export interface MenuSpec {
+  id: string
+  x: number
+  y: number
+  items: MenuEntry[]
+}
 
 export interface UIState {
   windowId: number
@@ -124,7 +148,13 @@ export interface UIState {
   railExpanded: boolean
   focus: boolean
   peek: boolean
-  overlay: { mode: OverlayMode; text: string; seq: number }
+  overlay: {
+    mode: OverlayMode
+    text: string
+    seq: number
+    dialog: DialogSpec | null
+    menu: MenuSpec | null
+  }
   pageRect: { x: number; y: number; width: number; height: number }
   update: string
   find: { active: number; total: number }

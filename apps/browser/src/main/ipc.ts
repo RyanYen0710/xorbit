@@ -120,6 +120,24 @@ const ACT: Record<string, Handler> = {
       str(p.text, 200),
     ),
   closeOverlay: (w) => w.closeOverlay(),
+  // X Orbit's own confirmation box and menu (pages ask; the overlay answers)
+  confirm: async (w, p) =>
+    (
+      await w.confirm({
+        title: str(p.title, 200),
+        message: str(p.message, 600),
+        buttons: [
+          { label: str(p.cancel, 40) || 'Cancel', value: 'cancel', kind: 'ghost' },
+          { label: str(p.ok, 40) || 'OK', value: 'ok', kind: p.danger ? 'danger' : 'primary' },
+        ],
+      })
+    ).value === 'ok',
+  overlayResult: (w, p) =>
+    w.resolveOverlay(
+      str(p.id, 64),
+      typeof p.value === 'string' ? str(p.value, 64) : null,
+      !!p.checked,
+    ),
   openInternal: (w, p) =>
     TAB_PAGES.includes(str(p.page)) && w.openInternal(str(p.page), str(p.section, 20) || undefined),
   cmd: (w, p) => runCommand(str(p.id, 40), w, str(p.arg, 200) || undefined),

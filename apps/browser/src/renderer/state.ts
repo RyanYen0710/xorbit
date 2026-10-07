@@ -30,6 +30,13 @@ export const useOrbit = () =>
   )
 export const act = (type: string, payload?: Record<string, unknown>) =>
   window.orbit.act(type, payload)
+/** X Orbit's own confirmation box (never the system one). Resolves true when the person confirms. */
+export const confirmBox = (o: {
+  title: string
+  message?: string
+  ok?: string
+  danger?: boolean
+}): Promise<boolean> => act('confirm', o) as Promise<boolean>
 export const query = (type: string, payload?: Record<string, unknown>) =>
   window.orbit.query(type, payload)
 

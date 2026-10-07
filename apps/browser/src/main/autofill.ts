@@ -5,7 +5,7 @@
 //  • a login fills only on the exact origin it was saved for (re-checked at fill time);
 //  • the page can't ask for a menu with a script: the preload only forwards trusted (isTrusted) focus events and
 //    main throttles requests; nothing auto-submits.
-import { Menu, clipboard, dialog, ipcMain, type IpcMainEvent, type WebContents } from 'electron'
+import { clipboard, ipcMain, type IpcMainEvent, type WebContents } from 'electron'
 import { db } from './store'
 import { byContents } from './registry'
 import type { OrbitWindow } from './window'
@@ -50,16 +50,16 @@ async function ask(
   if (asking.has(w)) return -1
   asking.add(w)
   try {
-    const r = await dialog.showMessageBox(w.win, {
-      type: 'question',
-      message,
-      detail,
-      buttons,
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true,
+    const r = await w.confirm({
+      title: message,
+      message: detail,
+      buttons: buttons.map((label, i) => ({
+        label,
+        value: String(i),
+        kind: i === 0 ? 'primary' : 'ghost',
+      })),
     })
-    return r.response
+    return r.value === null ? 1 : Number(r.value) // dismissing counts as "Not now"
   } finally {
     asking.delete(w)
   }
@@ -182,8 +182,7 @@ function onMenu(e: IpcMainEvent, d: any) {
   }
   const b = c.tab.view?.getBounds() ?? { x: 0, y: 0 }
   const z = c.wc.getZoomFactor()
-  Menu.buildFromTemplate(template).popup({
-    window: c.w.win,
+  void c.w.popup(template, {
     x: Math.round(b.x + r.x * z),
     y: Math.round(b.y + (r.y + r.h) * z),
   })

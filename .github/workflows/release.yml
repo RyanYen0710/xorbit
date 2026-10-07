@@ -33,3 +33,19 @@ jobs:
           # Windows signing (optional)
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+  # Only the newest release per channel stays listed (newest stable + newest pre-release); older ones are removed.
+  prune:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete older releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release list --limit 100 --json tagName,isPrerelease | jq -r '
+            ([.[] | select(.isPrerelease == false)][1:][].tagName),
+            ([.[] | select(.isPrerelease)][1:][].tagName)' |
+            xargs -r -n1 gh release delete --yes

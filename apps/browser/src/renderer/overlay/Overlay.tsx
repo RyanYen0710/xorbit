@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import type { PermissionKey, SiteInfo, Suggestion, UIState } from '@orbit/types'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { MenuEntry, PermissionKey, SiteInfo, Suggestion, UIState } from '@orbit/types'
 import { Icon } from '../icons'
 import { act, hostOf, kbdLabel, query, useOrbit } from '../state'
 
@@ -275,6 +275,155 @@ function Find({ s }: { s: UIState }) {
   )
 }
 
+const answer = (id: string, value: string | null, checked = false) =>
+  void act('overlayResult', { id, value, checked })
+
+/** X Orbit's confirmation box. Esc or a click outside cancels; Tab stays inside the box. */
+function Dialog({ s }: { s: UIState }) {
+  const d = s.overlay.dialog
+  const [checked, setChecked] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    setChecked(false)
+    const btns = box.current?.querySelectorAll<HTMLButtonElement>('button')
+    // destructive questions start on the safe button
+    const safe = box.current?.querySelector<HTMLButtonElement>('button[data-kind="ghost"]')
+    ;(d?.buttons.some((b) => b.kind === 'danger') ? safe : btns?.[btns.length - 1])?.focus()
+  }, [d?.id])
+  if (!d) return null
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      answer(d.id, null)
+    } else if (e.key === 'Tab') {
+      const f = [...(box.current?.querySelectorAll<HTMLElement>('button, input') ?? [])]
+      if (!f.length) return
+      const i = f.indexOf(document.activeElement as HTMLElement)
+      const n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : i === f.length - 1 ? 0 : i + 1
+      e.preventDefault()
+      f[n].focus()
+    }
+  }
+  return (
+    <div
+      className="scrim dlg-scrim"
+      onMouseDown={(e) => e.target === e.currentTarget && answer(d.id, null)}
+      onKeyDown={onKey}
+    >
+      <div
+        className="dlg"
+        ref={box}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="dlg-title"
+        aria-describedby="dlg-msg"
+      >
+        <h2 id="dlg-title" className="dlg-title">
+          {d.title}
+        </h2>
+        {d.message && (
+          <p id="dlg-msg" className="dlg-msg">
+            {d.message}
+          </p>
+        )}
+        {d.checkbox && (
+          <label className="dlg-check">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => setChecked(e.target.checked)}
+            />
+            {d.checkbox}
+          </label>
+        )}
+        <div className="dlg-actions">
+          {d.buttons.map((b) => (
+            <button
+              key={b.value}
+              className="btn"
+              data-kind={b.kind ?? 'ghost'}
+              onClick={() => answer(d.id, b.value, checked)}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** X Orbit's pop-up menu (right-click menus, saved-login picker). Arrow keys, Enter and Esc work. */
+function PopMenu({ s }: { s: UIState }) {
+  const m = s.overlay.menu
+  const box = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [open, setOpen] = useState<string | null>(null)
+  useLayoutEffect(() => {
+    if (!m || !box.current) return
+    const r = box.current.getBoundingClientRect()
+    const pad = 8
+    const below = m.y + r.height <= window.innerHeight - pad
+    const y = below ? m.y : m.y - r.height // no room underneath: open upwards
+    setPos({
+      x: Math.max(pad, Math.min(m.x, window.innerWidth - r.width - pad)),
+      y: Math.max(pad, Math.min(y, window.innerHeight - r.height - pad)),
+    })
+    setOpen(null)
+    box.current.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+  }, [m?.id])
+  if (!m) return null
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      answer(m.id, null)
+      return
+    }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    e.preventDefault()
+    const f = [...(box.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
+    const i = f.indexOf(document.activeElement as HTMLButtonElement)
+    f[(i + (e.key === 'ArrowDown' ? 1 : f.length - 1)) % f.length]?.focus()
+  }
+  const row = (it: MenuEntry, depth: number): React.ReactNode =>
+    it.separator ? (
+      <div className="pm-sep" role="separator" key={it.id} />
+    ) : (
+      <div key={it.id}>
+        <button
+          className="pm-item"
+          role="menuitem"
+          disabled={it.disabled}
+          style={{ paddingLeft: 12 + depth * 14 }}
+          aria-haspopup={it.children ? 'menu' : undefined}
+          aria-expanded={it.children ? open === it.id : undefined}
+          onClick={() =>
+            it.children ? setOpen(open === it.id ? null : it.id) : answer(m.id, it.id)
+          }
+        >
+          <span>{it.label}</span>
+          {it.children && <Icon n="chevron" size={12} />}
+        </button>
+        {it.children && open === it.id && it.children.map((c) => row(c, depth + 1))}
+      </div>
+    )
+  return (
+    <div
+      className="scrim pm-scrim"
+      onMouseDown={(e) => e.target === e.currentTarget && answer(m.id, null)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        answer(m.id, null)
+      }}
+      onKeyDown={onKey}
+    >
+      <div className="pm" ref={box} role="menu" style={{ left: pos.x, top: pos.y }}>
+        {m.items.map((it) => row(it, 0))}
+      </div>
+    </div>
+  )
+}
+
 export function Overlay() {
   const s = useOrbit()!
   switch (s.overlay.mode) {
@@ -288,6 +437,10 @@ export function Overlay() {
       return <Site s={s} />
     case 'find':
       return <Find s={s} />
+    case 'dialog':
+      return <Dialog s={s} />
+    case 'menu':
+      return <PopMenu s={s} />
     default:
       return null
   }

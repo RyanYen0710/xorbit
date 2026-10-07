@@ -36,7 +36,8 @@ Set `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` (and optionally `WIN_PUBLISHER`). Un
 1. Create the GitHub repo. Set `ORBIT_GH_OWNER`, `ORBIT_GH_REPO` (CI does this for you) and `NEXT_PUBLIC_GITHUB_REPO=owner/repo` on the website.
 2. Bump `apps/browser/package.json` `version`, tag it: `git tag v0.1.0 && git push --tags`.
    `.github/workflows/release.yml` builds mac + Windows and uploads installers plus `latest*.yml` update manifests.
-3. Installed builds check GitHub Releases through `electron-updater` (`apps/browser/src/main/updater.ts`).
+3. After a build, the `prune` job deletes older releases so only the newest stable (and newest pre-release) stays listed. The Download page always links to the newest.
+4. Installed builds check GitHub Releases through `electron-updater` (`apps/browser/src/main/updater.ts`).
 
 Channels: **stable** → releases not marked pre-release, **beta** → pre-releases (tag `v0.2.0-beta.1`), **developer** → alpha tags.
 The channel is chosen in Settings → About X Orbit.

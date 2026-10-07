@@ -2,7 +2,6 @@ import {
   app,
   BrowserWindow,
   clipboard,
-  Menu,
   nativeTheme,
   screen,
   shell,
@@ -12,7 +11,7 @@ import {
 import path from 'node:path'
 import { buildSearchUrl, resolveInput } from '@orbit/search'
 import { getPreset, resolveTheme, completeTheme, type Theme } from '@orbit/themes'
-import type { OverlayMode, Space, TabInfo, UIState } from '@orbit/types'
+import type { DialogSpec, MenuEntry, OverlayMode, Space, TabInfo, UIState } from '@orbit/types'
 import { db, DEFAULT_SPACE, uid, type SavedTab } from './store'
 import { canon, isInternalUrl, isTabPage, pageOf } from './internal'
 import { sessionFor, setupSession } from './session'
@@ -66,6 +65,10 @@ interface NewTabOpts {
 }
 
 let privateCounter = 0
+interface AskResult {
+  value: string | null
+  checked: boolean
+}
 
 export class OrbitWindow {
   readonly win: BrowserWindow
@@ -83,6 +86,10 @@ export class OrbitWindow {
   overlayMode: OverlayMode = 'compact'
   overlayText = ''
   overlaySeq = 0
+  private dialogSpec: DialogSpec | null = null
+  private menuSpec: { id: string; x: number; y: number; items: MenuEntry[] } | null = null
+  private ask: { id: string; mode: 'dialog' | 'menu'; done: (r: AskResult) => void } | null = null
+  private askQueue: Promise<unknown> = Promise.resolve()
   find = { active: 0, total: 0 }
   private mounted = new Set<WebContentsView>()
   private htmlFs = false
@@ -139,6 +146,7 @@ export class OrbitWindow {
     this.win.on('resize', () => this.saveBoundsSoon())
     this.win.on('close', () => {
       this.closing = true
+      if (this.ask) this.endAsk(this.ask, { value: null, checked: false })
       this.saveBounds()
       this.flushSession()
     })
@@ -226,7 +234,13 @@ export class OrbitWindow {
       railExpanded: this.railExpanded,
       focus: this.focus,
       peek: this.peek,
-      overlay: { mode: this.overlayMode, text: this.overlayText, seq: this.overlaySeq },
+      overlay: {
+        mode: this.overlayMode,
+        text: this.overlayText,
+        seq: this.overlaySeq,
+        dialog: this.dialogSpec,
+        menu: this.menuSpec,
+      },
       pageRect: this.rect,
       update: checkStatus(),
       find: this.find,
@@ -336,6 +350,8 @@ export class OrbitWindow {
 
   // ── overlay / chrome flags ────────────────────────────────────────────────
   setOverlay(mode: OverlayMode, text = '') {
+    const a = this.ask
+    if (a && mode !== a.mode) this.endAsk(a, { value: null, checked: false }) // something else took the overlay: cancel
     this.overlayMode = mode
     this.overlayText = text
     this.overlaySeq++
@@ -343,6 +359,58 @@ export class OrbitWindow {
     if (mode === 'compact' || mode === 'none') this.focusPage()
     else this.overlay.webContents.focus()
     this.changed()
+  }
+  private endAsk(a: NonNullable<OrbitWindow['ask']>, r: AskResult) {
+    this.ask = null
+    this.dialogSpec = null
+    this.menuSpec = null
+    a.done(r)
+  }
+  /** One X Orbit dialog or menu at a time; others wait their turn. */
+  private overlayAsk(mode: 'dialog' | 'menu', set: (id: string) => void): Promise<AskResult> {
+    const run = () =>
+      new Promise<AskResult>((done) => {
+        const id = uid()
+        set(id)
+        this.setOverlay(mode)
+        this.ask = { id, mode, done }
+      })
+    const p = this.askQueue.then(run, run)
+    this.askQueue = p
+    return p
+  }
+  /** Called by the overlay page with the chosen button / menu item (or null when dismissed). */
+  resolveOverlay(id: string, value: string | null, checked: boolean) {
+    const a = this.ask
+    if (!a || a.id !== id) return
+    this.endAsk(a, { value, checked })
+    this.closeOverlay()
+  }
+  confirm(spec: Omit<DialogSpec, 'id'>): Promise<AskResult> {
+    return this.overlayAsk('dialog', (id) => (this.dialogSpec = { ...spec, id }))
+  }
+  /** Pop-up menu drawn by X Orbit at the mouse position (or `at`, in window coordinates). */
+  async popup(template: MenuItemConstructorOptions[], at?: { x: number; y: number }) {
+    const acts = new Map<string, () => void>()
+    const conv = (t: MenuItemConstructorOptions[]): MenuEntry[] =>
+      t.map((it) => {
+        const id = uid()
+        if (it.type === 'separator') return { id, label: '', separator: true }
+        const e: MenuEntry = { id, label: it.label ?? '', disabled: it.enabled === false }
+        if (Array.isArray(it.submenu)) e.children = conv(it.submenu)
+        else if (it.click) acts.set(id, () => (it.click as () => void)())
+        return e
+      })
+    const items = conv(template)
+    let { x, y } = at ?? { x: 0, y: 0 }
+    if (!at) {
+      const c = screen.getCursorScreenPoint()
+      const b = this.win.getContentBounds()
+      x = c.x - b.x
+      y = c.y - b.y
+    }
+    const r = await this.overlayAsk('menu', (id) => (this.menuSpec = { id, x, y, items }))
+    if (r.value) acts.get(r.value)?.()
   }
   closeOverlay() {
     if (this.overlayMode === 'find')
@@ -404,7 +472,7 @@ export class OrbitWindow {
     t.archived = false
     this.activeSpaceId = t.spaceId
     if (this.split && id !== this.split.a && id !== this.split.b) this.split = null
-    if (this.overlayMode !== 'compact') this.overlayMode = 'compact'
+    if (this.overlayMode !== 'compact') this.setOverlay('compact')
     this.relayout()
     this.focusPage()
   }
@@ -785,16 +853,16 @@ export class OrbitWindow {
     }
     if (p.isEditable)
       T.push(
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { label: 'Cut', click: () => wc.cut() },
+        { label: 'Copy', click: () => wc.copy() },
+        { label: 'Paste', click: () => wc.paste() },
+        { label: 'Select All', click: () => wc.selectAll() },
         { type: 'separator' },
       )
     else if (p.selectionText) {
       const q = p.selectionText.trim().slice(0, 80)
       T.push(
-        { role: 'copy' },
+        { label: 'Copy', click: () => wc.copy() },
         {
           label: `Search for “${q.length > 24 ? q.slice(0, 24) + '…' : q}”`,
           click: () =>
@@ -824,14 +892,14 @@ export class OrbitWindow {
         },
       },
     )
-    Menu.buildFromTemplate(T).popup({ window: this.win })
+    void this.popup(T)
   }
 
   tabMenu(id: string, pin: (id: string) => void) {
     const t = this.tab(id)
     if (!t) return
     const others = this.spaces.filter((s) => s.id !== t.spaceId)
-    Menu.buildFromTemplate([
+    void this.popup([
       { label: 'Duplicate Tab', click: () => this.duplicate(id) },
       { label: 'Pin Page', click: () => pin(id) },
       { label: t.muted ? 'Unmute Tab' : 'Mute Tab', click: () => this.mute(id) },
@@ -851,7 +919,7 @@ export class OrbitWindow {
       { label: 'Copy URL', click: () => clipboard.writeText(t.url) },
       { type: 'separator' },
       { label: 'Close Tab', click: () => this.closeTab(id) },
-    ]).popup({ window: this.win })
+    ])
   }
 
   // ── lifecycle: archive / discard / persistence ────────────────────────────

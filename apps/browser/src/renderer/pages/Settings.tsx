@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { PROVIDERS } from '@orbit/search'
 import { PRESETS } from '@orbit/themes'
 import type { PermissionKey, PermissionValue, Settings as S, SearchProviderId } from '@orbit/types'
-import { act, kbdLabel, useOrbit } from '../state'
+import { act, confirmBox, kbdLabel, useOrbit } from '../state'
 import { EmbedContext, Page, Row, Toggle } from './shared'
 import { PasswordsSection, PaymentsSection } from './Vault'
 
@@ -252,8 +252,12 @@ export default function Settings() {
               className="btn ghost"
               disabled={s.spaces.length < 2}
               onClick={() =>
-                confirm(`Delete ${sp.name} and close its tabs?`) &&
-                act('deleteSpace', { id: sp.id })
+                confirmBox({
+                  title: `Delete ${sp.name}?`,
+                  message: 'Its tabs will be closed.',
+                  ok: 'Delete',
+                  danger: true,
+                }).then((ok) => (ok ? act('deleteSpace', { id: sp.id }) : undefined))
               }
             >
               Delete
@@ -392,9 +396,17 @@ export default function Settings() {
           <button
             className="btn ghost"
             onClick={() =>
-              confirm('Clear cookies and site data? You will be signed out of sites.') &&
-              act('clearData', { kind: 'cookies' }).then(() =>
-                setMsg('Cookies and site data cleared'),
+              confirmBox({
+                title: 'Clear cookies and site data?',
+                message: 'You will be signed out of sites.',
+                ok: 'Clear',
+                danger: true,
+              }).then((ok) =>
+                ok
+                  ? act('clearData', { kind: 'cookies' }).then(() =>
+                      setMsg('Cookies and site data cleared'),
+                    )
+                  : undefined,
               )
             }
           >
@@ -403,8 +415,16 @@ export default function Settings() {
           <button
             className="btn ghost"
             onClick={() =>
-              confirm('Clear history, cache, cookies and site permissions?') &&
-              act('clearData', { kind: 'all' }).then(() => setMsg('Everything cleared'))
+              confirmBox({
+                title: 'Clear everything?',
+                message: 'This clears history, cache, cookies and site permissions.',
+                ok: 'Clear everything',
+                danger: true,
+              }).then((ok) =>
+                ok
+                  ? act('clearData', { kind: 'all' }).then(() => setMsg('Everything cleared'))
+                  : undefined,
+              )
             }
           >
             Clear everything

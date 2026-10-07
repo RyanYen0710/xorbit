@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PRESETS, isColor, themeToCssVars } from '@orbit/themes'
 import type { Theme } from '@orbit/types'
 import { Logo } from '@orbit/ui'
-import { act, useOrbit } from '../state'
+import { act, confirmBox, useOrbit } from '../state'
 import { Page } from './shared'
 
 const FIELDS: [keyof Theme, string][] = [
@@ -231,8 +231,16 @@ export default function Themes() {
               <button
                 className="btn ghost"
                 onClick={() =>
-                  confirm(`Delete “${original.name}”?`) &&
-                  act('deleteTheme', { id: original.id }).then(() => setSel('zero'))
+                  confirmBox({
+                    title: `Delete “${original.name}”?`,
+                    message: 'This cannot be undone.',
+                    ok: 'Delete',
+                    danger: true,
+                  }).then((ok) =>
+                    ok
+                      ? act('deleteTheme', { id: original.id }).then(() => setSel('zero'))
+                      : undefined,
+                  )
                 }
               >
                 Delete
