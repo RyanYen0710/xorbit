@@ -5,7 +5,7 @@ Everything below that needs an account, certificate or money is **not included**
 ## Build locally
 
 ```bash
-pnpm package            # dmg + zip (mac), nsis (win) for the OS you're on → apps/browser/release/
+pnpm package            # dmg + zip (mac), nsis (win) for the OS you're on → apps/browser/release.noindex/
 pnpm --filter @orbit/browser package:dir   # unpacked app, fastest check
 ```
 

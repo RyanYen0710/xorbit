@@ -36,7 +36,7 @@ pnpm dev:web         # website → http://localhost:3000
 pnpm dev:search      # Orbit Search → http://localhost:4400/orbit-search
 ```
 
-Other commands: `pnpm build` (all), `pnpm package` (installers → `apps/browser/release/`), `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm format`.
+Other commands: `pnpm build` (all), `pnpm package` (installers → `apps/browser/release.noindex/`), `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm format`.
 
 End-to-end check of the MVP flow (needs a built app, no network):
 

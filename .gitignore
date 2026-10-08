@@ -9,6 +9,7 @@
 .tmp/
 .tools/
 apps/browser/release
+apps/browser/release.noindex
 dist
 firestore-debug.log
 node_modules

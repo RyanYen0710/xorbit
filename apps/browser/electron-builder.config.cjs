@@ -7,7 +7,8 @@ module.exports = {
   appId: 'app.xorbit.browser',
   productName: 'X Orbit',
   copyright: 'Copyright © X Orbit',
-  directories: { output: 'release', buildResources: 'resources' },
+  // ".noindex" makes Spotlight and Launchpad ignore the build copies of the app, so only /Applications/X Orbit.app shows up.
+  directories: { output: 'release.noindex', buildResources: 'resources' },
   files: ['out/**/*', 'package.json'],
   asar: true,
   afterSign: 'scripts/sign-app.cjs',
