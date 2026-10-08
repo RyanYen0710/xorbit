@@ -158,10 +158,15 @@ try {
   assert.match(text, new RegExp(`Updating X Orbit to ${NEW.replaceAll('.', '\\.')}`))
   assert.match(text, /\d+(\.\d)? MB\/s/)
   assert.match(text, /\d+\.\d MB \/ \d+\.\d MB/)
-  const png = await app.W(
-    `return (await w.overlay.webContents.capturePage()).toPNG().toString('base64')`,
-  )
-  fs.writeFileSync(path.resolve('.tmp/update-card.png'), Buffer.from(png, 'base64'))
+  // a picture of the card is a nice-to-have: it cannot be captured while the screen is locked or asleep
+  try {
+    const png = await app.W(
+      `return (await w.overlay.webContents.capturePage()).toPNG().toString('base64')`,
+    )
+    fs.writeFileSync(path.resolve('.tmp/update-card.png'), Buffer.from(png, 'base64'))
+  } catch {
+    /* no picture this time */
+  }
   // the bar keeps moving forward smoothly
   const readings = []
   for (let i = 0; i < 6; i++) {
