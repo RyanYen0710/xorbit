@@ -6,23 +6,23 @@ export const metadata: Metadata = { title: 'Browser' }
 const FEATURES: [string, string][] = [
   [
     'Orbit Rail',
-    'A narrow side strip with Spaces, pins, downloads, history and settings. Opens into Mission Control.',
+    'A narrow side strip with Spaces, tabs, downloads, history and settings. Opens into Mission Control.',
   ],
   [
     'Mission Control',
-    'Vertical tabs grouped as Pinned, Today and Older. Favicon, loading state, audio indicator, mute, close, drag and drop.',
+    'Vertical tabs grouped as Today and Older. Favicon, loading state, audio indicator, mute, close, drag and drop.',
   ],
   [
     'Spaces',
-    'Workspaces with their own tabs, pins and accent colour. Optional separate session per Space.',
+    'Workspaces with their own tabs and accent colour. Optional separate session per Space.',
   ],
   [
     'Orbit Bar',
-    'A floating bottom bar for URLs, searches, open tabs, history, pins, commands and quick maths.',
+    'A floating bottom bar for URLs, searches, open tabs, history, bookmarks, commands and quick maths.',
   ],
   [
     'Bookmarks grid',
-    'Your bookmarks as a grid on the new tab page, under the search box. Pin any of them to the side panel.',
+    'A second sidebar for your bookmarks, on the side opposite your tabs, with folders you can add, rename and drag into. Each site shows its own icon. The new tab page holds up to 8 pins.',
   ],
   [
     'Google or Bing',
@@ -37,8 +37,8 @@ const FEATURES: [string, string][] = [
   ],
   ['Downloads', 'Progress, pause and resume, cancel, retry, open and show in folder.'],
   [
-    'History & Pins',
-    'Searchable history grouped by day. Pins are bookmarks, per Space, with folders and JSON import/export.',
+    'History & Bookmarks',
+    'Searchable history grouped by day. Bookmarks keep their Chrome folders on import (from a file or straight from Chrome), and export as JSON.',
   ],
   [
     'Session restore',
@@ -57,7 +57,9 @@ const SHORTCUTS: [string, string][] = [
   ['Toggle sidebar', 'Ctrl/⌘ B'],
   ['Focus Mode', 'Ctrl/⌘ Shift F'],
   ['Split View', 'Ctrl/⌘ \\'],
-  ['Pin page', 'Ctrl/⌘ D'],
+  ['Bookmark page', 'Ctrl/⌘ D'],
+  ['Pin page to the new tab page', 'Ctrl/⌘ Shift D'],
+  ['Bookmarks sidebar', 'Ctrl/⌘ Shift B'],
 ]
 
 export default function Features() {

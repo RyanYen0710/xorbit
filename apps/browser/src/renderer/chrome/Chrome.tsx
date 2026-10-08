@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { Logo, Wordmark } from '@orbit/ui'
-import type { Pin, Space, TabInfo, UIState } from '@orbit/types'
+import type { Space, TabInfo, UIState } from '@orbit/types'
 import { Icon } from '../icons'
-import { act, groupByFolder, useFolderMemory, hostOf, useOrbit } from '../state'
+import { act, hostOf, useOrbit } from '../state'
+import { BookmarksPanel } from './BookmarksPanel'
 
 const DAY = 86_400_000
 const DND = 'text/orbit-tab'
@@ -115,45 +116,6 @@ function TabRow({ t, active, expanded }: { t: TabInfo; active: boolean; expanded
   )
 }
 
-function PinRow({ p, expanded }: { p: Pin; expanded: boolean }) {
-  return (
-    <div
-      className="tab pin"
-      role="button"
-      tabIndex={0}
-      draggable
-      title={expanded ? p.url : p.title}
-      onDragStart={(e) => e.dataTransfer.setData('text/orbit-pin', p.id)}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        const id = e.dataTransfer.getData('text/orbit-pin')
-        if (id) void act('movePin', { id, beforeId: p.id })
-      }}
-      onClick={() => act('navigate', { url: p.url, newTab: false, openPin: true })}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') void act('navigate', { url: p.url })
-      }}
-    >
-      <Favicon tab={{ favicon: p.favicon, loading: false, url: p.url, discarded: false }} />
-      {expanded && (
-        <>
-          <span className="tab-title">{p.title}</span>
-          <button
-            className="icon-btn tiny tab-close"
-            aria-label="Unpin"
-            onClick={(e) => {
-              e.stopPropagation()
-              void act('unpin', { id: p.id })
-            }}
-          >
-            <Icon n="close" size={13} />
-          </button>
-        </>
-      )}
-    </div>
-  )
-}
-
 function SpaceDot({ s, active }: { s: Space; active: boolean }) {
   const [over, setOver] = useState(false)
   return (
@@ -204,49 +166,6 @@ function Section({
   )
 }
 
-/** Pinned bookmarks, grouped into folders that open and close (remembered). Pins without a folder are listed first. */
-function PinnedList({ pins, expanded }: { pins: Pin[]; expanded: boolean }) {
-  const [open, toggle] = useFolderMemory('orbit.rail.openFolders')
-  return (
-    <>
-      {groupByFolder(pins).map(([folder, items]) =>
-        folder === '' ? (
-          items.map((p) => <PinRow key={p.id} p={p} expanded={expanded} />)
-        ) : (
-          <div key={folder} className="folder">
-            <button
-              className="tab folder-row"
-              aria-expanded={open.has(folder)}
-              title={`${folder} (${items.length})`}
-              onClick={() => toggle(folder)}
-            >
-              <span className="fav fav-letter folder-ico">
-                <Icon n="folder" size={14} />
-              </span>
-              {expanded && (
-                <>
-                  <span className="tab-title">{folder.split(' / ').pop()}</span>
-                  <span className="folder-count">{items.length}</span>
-                  <span className="folder-chev" data-open={open.has(folder)}>
-                    <Icon n="chevron" size={13} />
-                  </span>
-                </>
-              )}
-            </button>
-            {open.has(folder) && (
-              <div className="folder-items" data-nested={expanded}>
-                {items.map((p) => (
-                  <PinRow key={p.id} p={p} expanded={expanded} />
-                ))}
-              </div>
-            )}
-          </div>
-        ),
-      )}
-    </>
-  )
-}
-
 function Rail({ s }: { s: UIState }) {
   const ex = s.railExpanded
   const mac = s.platform === 'darwin'
@@ -257,7 +176,6 @@ function Rail({ s }: { s: UIState }) {
     (t) => !t.archived && (now - t.lastActive < DAY || t.id === s.activeTabId),
   )
   const older = tabs.filter((t) => !today.includes(t))
-  const pins = s.pins.filter((p) => p.spaceId === s.activeSpaceId && p.favorite !== false)
   const dl = s.downloads.filter((d) => d.state === 'progressing').length
   const nav = (section: string) => act('openInternal', { page: 'settings', section })
 
@@ -310,11 +228,6 @@ function Rail({ s }: { s: UIState }) {
           if (id) void act('moveTab', { id, beforeId: null })
         }}
       >
-        {pins.length > 0 && (
-          <Section label="PINNED" expanded={ex}>
-            <PinnedList pins={pins} expanded={ex} />
-          </Section>
-        )}
         <Section label="TODAY" expanded={ex}>
           {today.map((t) => (
             <TabRow key={t.id} t={t} active={t.id === s.activeTabId} expanded={ex} />
@@ -481,6 +394,15 @@ function TopStrip({ s }: { s: UIState }) {
         </button>
         <button
           className="icon-btn"
+          aria-label="Bookmarks sidebar"
+          aria-pressed={s.settings.bookmarksPanel}
+          title="Bookmarks sidebar"
+          onClick={() => act('toggleBookmarks')}
+        >
+          <Icon n="bookmark" />
+        </button>
+        <button
+          className="icon-btn"
           aria-label="Focus mode"
           title="Focus mode"
           onClick={() => act('toggleFocus')}
@@ -545,6 +467,7 @@ export function Chrome() {
         <>
           <Rail s={s} />
           <TopStrip s={s} />
+          {s.panelPx > 0 && <BookmarksPanel s={s} />}
         </>
       )}
       {noTab && !hidden && (

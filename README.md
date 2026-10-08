@@ -48,26 +48,26 @@ It launches the real app and verifies: onboarding, loading a page, search throug
 
 ## What's built
 
-| Area                                                                                                                 | Status                                                          |
-| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Tabs (new/close/reopen/duplicate/mute/drag/move to Space/archive/discard), back/forward/reload, find                 | ✅                                                              |
-| Orbit Rail + Mission Control (Pinned / Today / Older), Spaces (+ optional separate session)                          | ✅                                                              |
-| Orbit Bar (URL, search, `@tabs`, `@history`, `@pins`, `/commands`, calculator) and Orbit Command (⌘/Ctrl+K)          | ✅                                                              |
-| Split view (2 pages), Focus Mode, private windows                                                                    | ✅                                                              |
-| Search providers: Google (default), DuckDuckGo, Bing, Brave, Orbit Search, custom                                    | ✅                                                              |
-| Orbit Search page, Google Programmable Search + Brave API backends, fallback to Google                               | ✅                                                              |
-| Theme Studio (6 presets, custom, live preview, export/import JSON), appearance modes                                 | ✅                                                              |
-| History, downloads manager (pause/resume/cancel/retry), pins with folders + JSON import/export                       | ✅                                                              |
-| Privacy: third-party cookie blocking, JS switch, per-site permissions (prompt + panel), clear data, popups, autoplay | ✅                                                              |
-| Saved passwords + payment cards (encrypted with the OS keychain, local only, fill on click, no CVV stored)           | ✅ desktop app                                                  |
-| Passkeys                                                                                                             | ❌ needs code signing first                                     |
-| Session restore (tabs, Spaces, active tab, window bounds), first-run onboarding, custom error page                   | ✅                                                              |
-| Packaging (dmg/zip/NSIS/AppImage/deb configs), GitHub Releases auto-update, CI + release workflows                   | ✅ configured; mac arm64 package verified                       |
-| Website with download-page OS detection and real release lookup                                                      | ✅                                                              |
-| Orbit Index (own crawler/index)                                                                                      | ⏳ contract + docs only (`docs/orbit-index.md`)                 |
-| Extensions, sync, password manager, tracker/ad blocking, importing Chrome/Edge/Brave bookmarks, 3-way split          | ❌ not yet                                                      |
-| Trackpad Space gestures, hover-to-expand Rail (click or ⌘/Ctrl+B instead)                                            | ❌ not yet                                                      |
-| Windows/Linux builds                                                                                                 | configured, **not yet built or run** (only macOS was available) |
+| Area                                                                                                                                                                             | Status                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Tabs (new/close/reopen/duplicate/mute/drag/move to Space/archive/discard), back/forward/reload, find                                                                             | ✅                                                              |
+| Orbit Rail + Mission Control (Today / Older) and a bookmarks sidebar on the opposite side, Spaces (+ optional separate session)                                                  | ✅                                                              |
+| Orbit Bar (URL, search, `@tabs`, `@history`, `@pins`, `/commands`, calculator) and Orbit Command (⌘/Ctrl+K)                                                                      | ✅                                                              |
+| Split view (2 pages), Focus Mode, private windows                                                                                                                                | ✅                                                              |
+| Search providers: Google (default), DuckDuckGo, Bing, Brave, Orbit Search, custom                                                                                                | ✅                                                              |
+| Orbit Search page, Google Programmable Search + Brave API backends, fallback to Google                                                                                           | ✅                                                              |
+| Theme Studio (6 presets, custom, live preview, export/import JSON), appearance modes                                                                                             | ✅                                                              |
+| History, downloads manager (pause/resume/cancel/retry), bookmarks with real folders (add, rename, delete, drag to move), website icons, import from Chrome / a file, JSON export | ✅                                                              |
+| Privacy: third-party cookie blocking, JS switch, per-site permissions (prompt + panel), clear data, popups, autoplay                                                             | ✅                                                              |
+| Saved passwords + payment cards (encrypted with the OS keychain, local only, fill on click, no CVV stored)                                                                       | ✅ desktop app                                                  |
+| Passkeys                                                                                                                                                                         | ❌ needs code signing first                                     |
+| Session restore (tabs, Spaces, active tab, window bounds), first-run onboarding, custom error page                                                                               | ✅                                                              |
+| Packaging (dmg/zip/NSIS/AppImage/deb configs), GitHub Releases auto-update, CI + release workflows                                                                               | ✅ configured; mac arm64 package verified                       |
+| Website with download-page OS detection and real release lookup                                                                                                                  | ✅                                                              |
+| Orbit Index (own crawler/index)                                                                                                                                                  | ⏳ contract + docs only (`docs/orbit-index.md`)                 |
+| Extensions, sync, password manager, tracker/ad blocking, importing Chrome/Edge/Brave bookmarks, 3-way split                                                                      | ❌ not yet                                                      |
+| Trackpad Space gestures, hover-to-expand Rail (click or ⌘/Ctrl+B instead)                                                                                                        | ❌ not yet                                                      |
+| Windows/Linux builds                                                                                                                                                             | configured, **not yet built or run** (only macOS was available) |
 
 ## Chrome extension (`apps/extension`)
 

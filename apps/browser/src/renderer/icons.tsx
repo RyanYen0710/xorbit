@@ -24,6 +24,8 @@ const P: Record<string, string> = {
   detach: 'M14 4h6v6M20 4l-8 8M10 6H5v13h13v-5',
   trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
   folder: 'M3 6h6l2 2h10v11H3z',
+  folderPlus: 'M3 6h6l2 2h10v11H3zM12 11.5v5M9.5 14h5',
+  bookmark: 'M7 4h10v16l-5-4-5 4z',
   chevron: 'M8 10l4 4 4-4',
   panel: 'M4 5h16v14H4zM9 5v14',
   check: 'M5 12.5l4.5 4.5L19 7.5',

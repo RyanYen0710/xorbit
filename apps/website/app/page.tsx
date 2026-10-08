@@ -68,10 +68,11 @@ export default function Home() {
         <div className="cols">
           <div className="copy">
             <p>
-              <strong>The Orbit Rail</strong> is a narrow strip down the side: your Spaces, pinned
-              pages, downloads, history and settings. Click the logo and it opens into{' '}
-              <strong>Mission Control</strong>, with tabs stacked vertically under Pinned, Today and
-              Older.
+              <strong>The Orbit Rail</strong> is a narrow strip down the side: your Spaces,
+              downloads, history and settings. Click the logo and it opens into{' '}
+              <strong>Mission Control</strong>, with tabs stacked vertically under Today and Older.
+              Your bookmarks get their own sidebar on the other side, with folders and each site’s
+              icon.
             </p>
             <p>
               Drag tabs to reorder them or drop them on a Space. Tabs you haven’t touched in a while

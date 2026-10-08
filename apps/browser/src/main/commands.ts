@@ -4,6 +4,7 @@ import { PROVIDERS, calc, fuzzy, resolveInput } from '@orbit/search'
 import { PRESETS } from '@orbit/themes'
 import type { Pin, Space, Suggestion } from '@orbit/types'
 import { db, history, uid } from './store'
+import { addBookmark, toggleHome } from './library'
 import { focusedWindow, windows, broadcast } from './registry'
 import * as hist from './history'
 import { OrbitWindow } from './window'
@@ -13,23 +14,35 @@ import { isInternalUrl } from './internal'
 
 const SPACE_COLORS = ['#9cb4d8', '#c65332', '#2f6fe0', '#3ddc84', '#d8b86a', '#b6a9e8', '#c9ccd1']
 
-/** pinned=true → also shown in the sidebar; false → bookmark only (New Tab grid). Calling again removes it. */
-export function pinPage(w: OrbitWindow, tabId?: string, pinned = true) {
+/** Bookmarks the page; calling again removes the bookmark. */
+export function pinPage(w: OrbitWindow, tabId?: string) {
   const t = w.tab(tabId) ?? w.activeTab
   if (!t || !/^https?:/.test(t.url)) return
-  const existing = db.data.pins.find((p) => p.url === t.url && p.spaceId === t.spaceId)
+  const existing = db.data.pins.find((p) => p.url === t.url)
   if (existing) db.data.pins = db.data.pins.filter((p) => p !== existing)
   else
-    db.data.pins.push({
-      id: uid(),
-      spaceId: t.spaceId,
-      title: t.title || new URL(t.url).host,
+    addBookmark({
       url: t.url,
-      favicon: t.favicon,
-      folder: '',
+      title: t.title,
+      favicon: t.favicon?.startsWith('data:') ? t.favicon : '',
     })
   db.save()
   broadcast()
+}
+
+/** Shows the page as a tile on the New Tab page (adding the bookmark first when needed). At most 8 tiles. */
+export function pinToHome(w: OrbitWindow) {
+  const t = w.activeTab
+  if (!t || !/^https?:/.test(t.url)) return
+  if (!db.data.pins.some((p) => p.url === t.url)) addBookmark({ url: t.url, title: t.title })
+  const p = db.data.pins.find((x) => x.url === t.url)
+  const r = p ? toggleHome(p.id) : ''
+  if (r.startsWith('!'))
+    void w.confirm({
+      title: 'The homepage is full',
+      message: r.slice(1),
+      buttons: [{ label: 'OK', value: 'ok', kind: 'primary' }],
+    })
 }
 
 export function createSpace(w: OrbitWindow, name: string, extra: Partial<Space> = {}) {
@@ -130,11 +143,17 @@ export const COMMANDS: Command[] = [
   {
     id: 'bookmarkPage',
     title: 'Bookmark Page',
-    kbd: 'Mod+Shift+D',
+    kbd: 'Mod+D',
     slash: 'bookmark',
-    run: (w) => pinPage(w, undefined, false),
+    run: (w) => pinPage(w),
   },
-  { id: 'pinPage', title: 'Pin Page', kbd: 'Mod+D', slash: 'pin', run: (w) => pinPage(w) },
+  {
+    id: 'pinPage',
+    title: 'Pin Page to Homepage',
+    kbd: 'Mod+Shift+D',
+    slash: 'pin',
+    run: (w) => pinToHome(w),
+  },
   {
     id: 'newSpace',
     title: 'New Space',
@@ -172,6 +191,12 @@ export const COMMANDS: Command[] = [
     title: 'Clear Browsing Data',
     slash: 'clear',
     run: (w) => w.openInternal('settings', 'privacy'),
+  },
+  {
+    id: 'toggleBookmarks',
+    title: 'Toggle Bookmarks Sidebar',
+    kbd: 'Mod+Shift+B',
+    run: (w) => w.toggleBookmarks(),
   },
   { id: 'toggleRail', title: 'Toggle Sidebar', kbd: 'Mod+B', run: (w) => w.toggleRail() },
   {

@@ -1,4 +1,4 @@
-export const VERSION = '0.1.7'
+export const VERSION = '0.1.8'
 export const CHANNEL = 'BETA'
 // NEXT_PUBLIC_SITE_URL wins; on Vercel fall back to its production URL; locally use localhost.
 export const SITE_URL =

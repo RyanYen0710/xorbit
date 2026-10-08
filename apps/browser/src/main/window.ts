@@ -19,6 +19,7 @@ import { byContents, windows } from './registry'
 import * as hist from './history'
 import { checkStatus, updaterState } from './updater'
 import { accountState, openInOtherBrowser } from './account'
+import { allFolders } from './library'
 
 const PRELOAD = path.join(__dirname, '../preload/index.js')
 const SHELL_PREFS = {
@@ -33,6 +34,8 @@ const TOP_H = 36
 const GAP = 6
 /** The page Google shows when it refuses a browser. */
 const GOOGLE_BLOCK = /^https:\/\/accounts\.google\.com\/.*\/signin\/rejected/
+const PANEL_W = 280
+const PANEL_MIN_WINDOW = 880 // below this the bookmarks sidebar tucks away
 const BAR = { w: 380, h: 44, bottom: 18 }
 const EXIT_W = 112
 const PRIVATE_THEME: Partial<Theme> = {
@@ -72,6 +75,7 @@ let privateCounter = 0
 interface AskResult {
   value: string | null
   checked: boolean
+  values: Record<string, string>
 }
 
 export class OrbitWindow {
@@ -104,7 +108,8 @@ export class OrbitWindow {
   /** Rail width and top-strip height as currently drawn; they glide to their goals instead of jumping. */
   railPx = 0
   topPx = 0
-  private chromeGoal = { rail: -1, top: -1 }
+  panelPx = 0 // the bookmarks sidebar
+  private chromeGoal = { rail: -1, top: -1, panel: -1 }
   private chromeAnim: NodeJS.Timeout | null = null
   private peekWatch: NodeJS.Timeout | null = null
   private peekOutSince = 0
@@ -157,7 +162,7 @@ export class OrbitWindow {
     this.win.on('resize', () => this.saveBoundsSoon())
     this.win.on('close', () => {
       this.closing = true
-      if (this.ask) this.endAsk(this.ask, { value: null, checked: false })
+      if (this.ask) this.endAsk(this.ask, { value: null, checked: false, values: {} })
       this.saveBounds()
       this.flushSession()
     })
@@ -257,6 +262,8 @@ export class OrbitWindow {
       updater: updaterState(),
       account: accountState(),
       railPx: this.railPx,
+      panelPx: this.panelPx,
+      folders: allFolders(),
       topPx: this.topPx,
       find: this.find,
     }
@@ -305,15 +312,19 @@ export class OrbitWindow {
         ? st.railWidth
         : RAIL_COLLAPSED
     const top = this.chromeHidden ? 0 : TOP_H
+    // the bookmarks sidebar sits on the side opposite the tabs; narrow windows tuck it away
+    const panel =
+      !this.chromeHidden && st.bookmarksPanel && W - rail >= PANEL_MIN_WINDOW ? PANEL_W : 0
     const g = this.chromeGoal
     if (g.rail < 0 || this.htmlFs || !st.animations || !this.win.isVisible()) {
       this.stopChromeAnim()
-      this.chromeGoal = { rail, top }
+      this.chromeGoal = { rail, top, panel }
       this.railPx = rail
       this.topPx = top
-    } else if (g.rail !== rail || g.top !== top) {
-      this.chromeGoal = { rail, top }
-      this.animateChrome(rail, top)
+      this.panelPx = panel
+    } else if (g.rail !== rail || g.top !== top || g.panel !== panel) {
+      this.chromeGoal = { rail, top, panel }
+      this.animateChrome(rail, top, panel)
     }
     this.applyChrome()
   }
@@ -321,10 +332,10 @@ export class OrbitWindow {
     if (this.chromeAnim) clearInterval(this.chromeAnim)
     this.chromeAnim = null
   }
-  /** Slides the rail and top strip to their new size (about 0.2 s, easing out) so nothing pops. */
-  private animateChrome(rail: number, top: number) {
+  /** Slides the sidebars and top strip to their new size (about 0.2 s, easing out) so nothing pops. */
+  private animateChrome(rail: number, top: number, panel: number) {
     this.stopChromeAnim()
-    const from = { rail: this.railPx, top: this.topPx }
+    const from = { rail: this.railPx, top: this.topPx, panel: this.panelPx }
     const t0 = Date.now()
     this.chromeAnim = setInterval(() => {
       if (this.win.isDestroyed()) return this.stopChromeAnim()
@@ -332,6 +343,7 @@ export class OrbitWindow {
       const e = 1 - Math.pow(1 - k, 3)
       this.railPx = Math.round(from.rail + (rail - from.rail) * e)
       this.topPx = Math.round(from.top + (top - from.top) * e)
+      this.panelPx = Math.round(from.panel + (panel - from.panel) * e)
       this.applyChrome()
       if (k >= 1) this.stopChromeAnim()
     }, 16)
@@ -339,16 +351,21 @@ export class OrbitWindow {
   private applyChrome() {
     if (this.win.isDestroyed()) return
     const [W, H] = this.win.getContentSize()
-    const right = db.data.settings.railPosition === 'right'
+    const opposite = db.data.settings.railPosition === 'right'
     this.rect = {
-      x: right ? 0 : this.railPx,
+      x: opposite ? this.panelPx : this.railPx,
       y: this.topPx,
-      width: W - this.railPx,
+      width: W - this.railPx - this.panelPx,
       height: H - this.topPx,
     }
     this.syncViews()
     this.layoutOverlay()
     this.changed()
+  }
+  toggleBookmarks() {
+    db.data.settings.bookmarksPanel = !db.data.settings.bookmarksPanel
+    db.save()
+    this.relayout()
   }
 
   private syncViews() {
@@ -415,7 +432,7 @@ export class OrbitWindow {
   // ── overlay / chrome flags ────────────────────────────────────────────────
   setOverlay(mode: OverlayMode, text = '') {
     const a = this.ask
-    if (a && mode !== a.mode) this.endAsk(a, { value: null, checked: false }) // something else took the overlay: cancel
+    if (a && mode !== a.mode) this.endAsk(a, { value: null, checked: false, values: {} }) // something else took the overlay: cancel
     this.overlayMode = mode
     this.overlayText = text
     this.overlaySeq++
@@ -444,10 +461,15 @@ export class OrbitWindow {
     return p
   }
   /** Called by the overlay page with the chosen button / menu item (or null when dismissed). */
-  resolveOverlay(id: string, value: string | null, checked: boolean) {
+  resolveOverlay(
+    id: string,
+    value: string | null,
+    checked: boolean,
+    values: Record<string, string> = {},
+  ) {
     const a = this.ask
     if (!a || a.id !== id) return
-    this.endAsk(a, { value, checked })
+    this.endAsk(a, { value, checked, values })
     this.closeOverlay()
   }
   confirm(spec: Omit<DialogSpec, 'id'>): Promise<AskResult> {
@@ -1034,7 +1056,7 @@ export class OrbitWindow {
     const others = this.spaces.filter((s) => s.id !== t.spaceId)
     void this.popup([
       { label: 'Duplicate Tab', click: () => this.duplicate(id) },
-      { label: 'Pin Page', click: () => pin(id) },
+      { label: 'Bookmark Page', click: () => pin(id) },
       { label: t.muted ? 'Unmute Tab' : 'Mute Tab', click: () => this.mute(id) },
       {
         label: 'Open in Split View',

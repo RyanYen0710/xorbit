@@ -1,25 +1,25 @@
 import { useState } from 'react'
+import { BookmarkIcon } from '../bookmark-icon'
 import { Icon } from '../icons'
 import { act, groupByFolder, hostOf, useFolderMemory, useOrbit } from '../state'
 import { Empty, Page } from './shared'
+
+const MAX_PINS = 8
 
 export default function Pins() {
   const s = useOrbit()!
   const [closed, toggle] = useFolderMemory('orbit.pins.closedFolders')
   const [msg, setMsg] = useState('')
+  const homeCount = s.pins.filter((p) => p.home).length
   return (
-    <Page index="04" label="PINS" title="Pins">
+    <Page index="04" label="BOOKMARKS" title="Bookmarks" wide>
       <p className="lede">
-        Pins are X Orbit’s bookmarks. Pin the current page with{' '}
-        {s.platform === 'darwin' ? '⌘D' : 'Ctrl+D'}; each Space keeps its own pins.
+        Your bookmarks live in the sidebar on the{' '}
+        {s.settings.railPosition === 'right' ? 'left' : 'right'} (
+        {s.platform === 'darwin' ? '⌘⇧B' : 'Ctrl+Shift+B'} shows or hides it). Pin up to {MAX_PINS}{' '}
+        of them to the homepage: {homeCount}/{MAX_PINS} pinned.
       </p>
       <div className="toolbar">
-        <button className="btn ghost" onClick={() => act('exportPins')}>
-          Export JSON
-        </button>
-        <button className="btn ghost" onClick={async () => setMsg(await act('importPins'))}>
-          Import JSON
-        </button>
         <button
           className="btn ghost accent"
           onClick={async () => setMsg(await act('importBookmarksFile'))}
@@ -35,104 +35,98 @@ export default function Pins() {
             Import from {b[0].toUpperCase() + b.slice(1)}
           </button>
         ))}
+        <button className="btn ghost" onClick={() => act('bookmarkAddDialog', { current: true })}>
+          Add site
+        </button>
+        <button className="btn ghost" onClick={() => act('folderAddDialog', { parent: '' })}>
+          New folder
+        </button>
+        <button className="btn ghost" onClick={() => act('exportPins')}>
+          Export JSON
+        </button>
+        <button className="btn ghost" onClick={async () => setMsg(await act('importPins'))}>
+          Import JSON
+        </button>
         {msg && <span className="orbit-label">{msg}</span>}
       </div>
       <p className="srow-hint">
         Chrome bookmarks: in Chrome open the Bookmark Manager (⌥⌘B), choose ⋮ → Export bookmarks,
         then use “Import from file…” and pick the saved file.
       </p>
-      {s.pins.length === 0 && (
-        <Empty title="NO PINS YET">Pin a page to keep it one click away.</Empty>
+      {s.pins.length === 0 && s.folders.length === 0 && (
+        <Empty title="NO BOOKMARKS YET">Add a site, or import your bookmarks from Chrome.</Empty>
       )}
-      {s.spaces.map((sp) => {
-        const pins = s.pins.filter((p) => p.spaceId === sp.id)
-        if (!pins.length) return null
+      {groupByFolder([
+        ...s.folders.map((f) => ({ folder: f, empty: true as const })),
+        ...s.pins,
+      ]).map(([folder, items]) => {
+        const pins = items.filter((x): x is (typeof s.pins)[number] => !('empty' in x))
         return (
-          <section key={sp.id} className="hist-group">
-            <div className="orbit-label hist-label">
-              <span style={{ color: sp.color }}>●</span> {sp.name}
-            </div>
-            {groupByFolder(pins).map(([folder, items]) => (
-              <div key={folder} className="pin-folder">
-                {folder !== '' && (
-                  <button
-                    className="folder-head"
-                    aria-expanded={!closed.has(sp.id + '|' + folder)}
-                    onClick={() => toggle(sp.id + '|' + folder)}
+          <section key={folder} className="hist-group">
+            {folder !== '' && (
+              <button
+                className="folder-head"
+                aria-expanded={!closed.has(folder)}
+                onClick={() => toggle(folder)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  void act('folderMenu', { path: folder })
+                }}
+              >
+                <span className="folder-chev" data-open={!closed.has(folder)}>
+                  <Icon n="chevron" size={14} />
+                </span>
+                <Icon n="folder" size={14} />
+                <span className="folder-name">{folder}</span>
+                <span className="folder-count">{pins.length}</span>
+              </button>
+            )}
+            {(folder === '' || !closed.has(folder)) &&
+              pins.map((p) => (
+                <div
+                  className="hist-row"
+                  key={p.id}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    void act('bookmarkMenu', { id: p.id })
+                  }}
+                >
+                  <span className="hist-time">
+                    <BookmarkIcon url={p.url} favicon={p.favicon} />
+                  </span>
+                  <a
+                    href="#"
+                    className="hist-title"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      void act('navigate', { url: p.url, newTab: true })
+                    }}
                   >
-                    <span className="folder-chev" data-open={!closed.has(sp.id + '|' + folder)}>
-                      <Icon n="chevron" size={14} />
-                    </span>
-                    <Icon n="folder" size={14} />
-                    <span className="folder-name">{folder}</span>
-                    <span className="folder-count">{items.length}</span>
+                    {p.title}
+                  </a>
+                  <span className="hist-host">{hostOf(p.url)}</span>
+                  <button
+                    className="icon-btn"
+                    aria-pressed={!!p.home}
+                    aria-label={`${p.home ? 'Remove from' : 'Show on'} the homepage: ${p.title}`}
+                    title={p.home ? 'Pinned to the homepage' : 'Pin to the homepage'}
+                    onClick={async () => {
+                      const r = (await act('bookmarkHome', { id: p.id })) as string
+                      setMsg(r.startsWith('!') ? r.slice(1) : '')
+                    }}
+                    style={{ color: p.home ? 'var(--orbit-accent)' : undefined }}
+                  >
+                    <Icon n="pin" size={14} />
                   </button>
-                )}
-                {(folder === '' || !closed.has(sp.id + '|' + folder)) && (
-                  <div className={folder === '' ? '' : 'folder-body'}>
-                    {items.map((p) => (
-                      <div
-                        className="hist-row"
-                        key={p.id}
-                        draggable
-                        onDragStart={(e) => e.dataTransfer.setData('text/pin', p.id)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          const id = e.dataTransfer.getData('text/pin')
-                          if (id) void act('movePin', { id, beforeId: p.id })
-                        }}
-                      >
-                        <span className="hist-time">
-                          {p.favicon && <img src={p.favicon} alt="" width={14} height={14} />}
-                        </span>
-                        <a
-                          href="#"
-                          className="hist-title"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            void act('navigate', { url: p.url, newTab: true })
-                          }}
-                        >
-                          {p.title}
-                        </a>
-                        <span className="hist-host">{hostOf(p.url)}</span>
-                        <button
-                          className="icon-btn"
-                          aria-pressed={p.favorite !== false}
-                          aria-label={`${p.favorite !== false ? 'Unpin from' : 'Pin to'} sidebar: ${p.title}`}
-                          title={
-                            p.favorite !== false ? 'Pinned to the sidebar' : 'Pin to the sidebar'
-                          }
-                          onClick={() => act('favoritePin', { id: p.id })}
-                          style={{
-                            color: p.favorite !== false ? 'var(--orbit-accent)' : undefined,
-                          }}
-                        >
-                          <Icon n="pin" size={14} />
-                        </button>
-                        <input
-                          className="field folder"
-                          placeholder="Folder"
-                          aria-label={`Folder for ${p.title}`}
-                          defaultValue={p.folder}
-                          onBlur={(e) =>
-                            e.target.value !== p.folder &&
-                            act('updatePin', { id: p.id, folder: e.target.value })
-                          }
-                        />
-                        <button
-                          className="icon-btn"
-                          aria-label={`Unpin ${p.title}`}
-                          onClick={() => act('unpin', { id: p.id })}
-                        >
-                          <Icon n="close" size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+                  <button
+                    className="icon-btn"
+                    aria-label={`Delete ${p.title}`}
+                    onClick={() => act('unpin', { id: p.id })}
+                  >
+                    <Icon n="close" size={14} />
+                  </button>
+                </div>
+              ))}
           </section>
         )
       })}

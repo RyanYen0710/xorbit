@@ -5,6 +5,17 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.8',
+    channel: 'Beta',
+    items: [
+      'New layout: a second sidebar for bookmarks on the side opposite your tabs. It has real folders (add, rename, delete, drag bookmarks in), a search box, and buttons to add a folder or a site. Hide or show it with Ctrl/⌘ Shift B.',
+      'Pins now live on the new tab page: up to 8. Everything else is a bookmark in the sidebar.',
+      'Every bookmark shows its website’s own icon, fetched straight from the site.',
+      'Settings: the sidebar position is now Default or Opposite (tabs and bookmarks swap sides).',
+      'Fixed the new tab page not scrolling when the bookmark list was long.',
+    ],
+  },
+  {
     v: '0.1.7',
     channel: 'Beta',
     items: [

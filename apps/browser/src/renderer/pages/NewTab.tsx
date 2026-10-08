@@ -1,85 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Logo } from '@orbit/ui'
 import { PROVIDERS } from '@orbit/search'
-import { act, hostOf, useOrbit } from '../state'
+import { BookmarkIcon } from '../bookmark-icon'
+import { act, useOrbit } from '../state'
 
-const SHOWN = 17 // + the Add tile = one tidy block
-
-function Fav({ url, src }: { url: string; src: string }) {
-  const [bad, setBad] = useState(false)
-  return src && !bad ? (
-    <img src={src} alt="" width={24} height={24} onError={() => setBad(true)} />
-  ) : (
-    <span className="mono">{(hostOf(url)[0] ?? '·').toUpperCase()}</span>
-  )
-}
-
-function AddTile() {
-  const [open, setOpen] = useState(false)
-  const [url, setUrl] = useState('')
-  const [title, setTitle] = useState('')
-  const [msg, setMsg] = useState('')
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const r = (await act('addBookmark', { url, title })) as string
-    if (r === 'Added') {
-      setOpen(false)
-      setUrl('')
-      setTitle('')
-      setMsg('')
-    } else setMsg(r)
-  }
-  if (!open)
-    return (
-      <button className="bm-tile bm-add" onClick={() => setOpen(true)} aria-label="Add bookmark">
-        <span className="bm-ico">+</span>
-        <span className="bm-title">Add bookmark</span>
-      </button>
-    )
-  return (
-    <form className="bm-tile bm-form" onSubmit={submit}>
-      <input
-        autoFocus
-        className="field"
-        placeholder="Web address"
-        aria-label="Web address"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
-      <input
-        className="field"
-        placeholder="Name (optional)"
-        aria-label="Name"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      {msg && (
-        <span className="orbit-label" role="alert">
-          {msg}
-        </span>
-      )}
-      <span className="bm-form-btns">
-        <button type="submit" className="btn ghost">
-          Add
-        </button>
-        <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
-          Cancel
-        </button>
-      </span>
-    </form>
-  )
-}
+const MAX_PINS = 8
 
 export default function NewTab() {
   const s = useOrbit()!
   const [q, setQ] = useState('')
-  const [all, setAll] = useState(false)
-  const [msg, setMsg] = useState('')
   useEffect(() => {
     document.title = 'New Tab'
   }, [])
-  const bookmarks = s.pins.filter((p) => p.spaceId === s.activeSpaceId)
-  const shown = all ? bookmarks : bookmarks.slice(0, SHOWN)
+  const pins = s.pins.filter((p) => p.home).slice(0, MAX_PINS)
   const space = s.spaces.find((x) => x.id === s.activeSpaceId)
   const provider = s.settings.searchProvider
   const mod = s.platform === 'darwin' ? '⌘' : 'Ctrl+'
@@ -131,78 +64,52 @@ export default function NewTab() {
           {space && <span className="orbit-label">&nbsp;·&nbsp; SPACE / {space.name}</span>}
         </div>
 
-        <section className="bm" aria-label="Bookmarks">
-          <div className="bm-grid">
-            {shown.map((p) => {
-              const fav = p.favorite !== false
-              return (
-                <div className="bm-tile" key={p.id}>
-                  <a
-                    href="#"
-                    title={p.url}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      void act('navigate', { url: p.url })
-                    }}
-                  >
-                    <span className="bm-ico">
-                      <Fav url={p.url} src={p.favicon} />
-                    </span>
-                    <span className="bm-title">{p.title}</span>
-                  </a>
-                  <button
-                    className="bm-pin"
-                    aria-pressed={fav}
-                    aria-label={
-                      fav ? `Unpin ${p.title} from the sidebar` : `Pin ${p.title} to the sidebar`
-                    }
-                    title={fav ? 'Pinned to the sidebar' : 'Pin to the sidebar'}
-                    onClick={() => act('favoritePin', { id: p.id })}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill={fav ? 'currentColor' : 'none'}
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M7 4h10v16l-5-4-5 4z" />
-                    </svg>
-                  </button>
-                </div>
-              )
-            })}
-            <AddTile />
+        <section className="bm" aria-label="Pins">
+          <div className="orbit-label bm-count-label">
+            PINS · {pins.length}/{MAX_PINS}
           </div>
-          {bookmarks.length > SHOWN && (
-            <button className="bm-more orbit-label" onClick={() => setAll(!all)}>
-              {all ? 'SHOW LESS' : `SHOW ALL ${bookmarks.length}`}
-            </button>
-          )}
-          {bookmarks.length === 0 && (
-            <div className="bm-import">
-              <span className="orbit-label">IMPORT BOOKMARKS FROM</span>
-              {(['chrome', 'edge', 'brave'] as const).map((b) => (
-                <button
-                  key={b}
-                  className="btn ghost"
-                  onClick={async () =>
-                    setMsg((await act('importBookmarks', { browser: b })) as string)
-                  }
+          <div className="bm-grid">
+            {pins.map((p) => (
+              <div className="bm-tile" key={p.id}>
+                <a
+                  href="#"
+                  title={p.url}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    void act('navigate', { url: p.url })
+                  }}
                 >
-                  {b[0].toUpperCase() + b.slice(1)}
+                  <span className="bm-ico">
+                    <BookmarkIcon url={p.url} favicon={p.favicon} size={28} />
+                  </span>
+                  <span className="bm-title">{p.title}</span>
+                </a>
+                <button
+                  className="bm-pin"
+                  aria-label={`Remove ${p.title} from the pins`}
+                  title="Remove from pins"
+                  onClick={() => act('bookmarkHome', { id: p.id })}
+                >
+                  ×
                 </button>
-              ))}
-            </div>
-          )}
-          {(msg || bookmarks.length === 0) && (
-            <p className="orbit-label bm-empty" role="status">
-              {msg ||
-                `Or open a page and press ${mod}D to pin it · ${s.platform === 'darwin' ? '⌘⇧' : 'Ctrl+Shift+'}D to bookmark it`}
-            </p>
-          )}
+              </div>
+            ))}
+            {pins.length < MAX_PINS && (
+              <button
+                className="bm-tile bm-add"
+                onClick={() => act('bookmarkAddDialog', { home: true })}
+                aria-label="Add a pin"
+              >
+                <span className="bm-ico">+</span>
+                <span className="bm-title">Add pin</span>
+              </button>
+            )}
+          </div>
+          <p className="orbit-label bm-empty" role="status">
+            {pins.length >= MAX_PINS
+              ? `The homepage is full (${MAX_PINS} pins). Remove one to add another.`
+              : `Pin up to ${MAX_PINS} sites here · ${mod}⇧D pins the page you are on · all your bookmarks live in the sidebar`}
+          </p>
         </section>
       </div>
     </main>

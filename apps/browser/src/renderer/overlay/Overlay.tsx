@@ -374,22 +374,34 @@ function UpdateCard({ s }: { s: UIState }) {
   )
 }
 
-const answer = (id: string, value: string | null, checked = false) =>
-  void act('overlayResult', { id, value, checked })
+const answer = (
+  id: string,
+  value: string | null,
+  checked = false,
+  values: Record<string, string> = {},
+) => void act('overlayResult', { id, value, checked, values })
 
 /** X Orbit's confirmation box. Esc or a click outside cancels; Tab stays inside the box. */
 function Dialog({ s }: { s: UIState }) {
   const d = s.overlay.dialog
   const [checked, setChecked] = useState(false)
+  const [vals, setVals] = useState<Record<string, string>>({})
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    setChecked(false)
+    setChecked(!!d?.checkboxChecked)
+    setVals(Object.fromEntries((d?.fields ?? []).map((f) => [f.name, f.value ?? ''])))
+    // a window with input fields starts in the first field; destructive questions start on the safe button
+    const first = box.current?.querySelector<HTMLElement>('input:not([type=checkbox]), select')
     const btns = box.current?.querySelectorAll<HTMLButtonElement>('button')
-    // destructive questions start on the safe button
     const safe = box.current?.querySelector<HTMLButtonElement>('button[data-kind="ghost"]')
-    ;(d?.buttons.some((b) => b.kind === 'danger') ? safe : btns?.[btns.length - 1])?.focus()
+    ;(
+      first ?? (d?.buttons.some((b) => b.kind === 'danger') ? safe : btns?.[btns.length - 1])
+    )?.focus()
+    if (first instanceof HTMLInputElement) first.select()
   }, [d?.id])
   if (!d) return null
+  const ready = (d.fields ?? []).every((f) => !f.required || (vals[f.name] ?? '').trim() !== '')
+  const primary = d.buttons.find((b) => b.kind === 'primary' || b.kind === 'danger')
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
@@ -401,6 +413,12 @@ function Dialog({ s }: { s: UIState }) {
       const n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : i === f.length - 1 ? 0 : i + 1
       e.preventDefault()
       f[n].focus()
+    } else if (e.key === 'Enter' && d.fields?.length && e.target instanceof HTMLInputElement) {
+      // Enter in a text field confirms the window
+      if (e.target.type !== 'checkbox' && primary && ready) {
+        e.preventDefault()
+        answer(d.id, primary.value, checked, vals)
+      }
     }
   }
   return (
@@ -425,6 +443,39 @@ function Dialog({ s }: { s: UIState }) {
             {d.message}
           </p>
         )}
+        {d.fields?.map((f) => (
+          <label className="dlg-field" key={f.name}>
+            <span className="orbit-label">{f.label.toUpperCase()}</span>
+            {f.options ? (
+              <select
+                className="field"
+                value={vals[f.name] ?? ''}
+                onChange={(e) => setVals({ ...vals, [f.name]: e.target.value })}
+              >
+                {f.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o || 'No folder'}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="field"
+                value={vals[f.name] ?? ''}
+                placeholder={f.placeholder}
+                maxLength={f.name === 'url' ? 2000 : 200}
+                spellCheck={false}
+                autoComplete="off"
+                onChange={(e) => setVals({ ...vals, [f.name]: e.target.value })}
+              />
+            )}
+          </label>
+        ))}
+        {d.error && (
+          <p className="dlg-error" role="alert">
+            {d.error}
+          </p>
+        )}
         {d.checkbox && (
           <label className="dlg-check">
             <input
@@ -441,7 +492,8 @@ function Dialog({ s }: { s: UIState }) {
               key={b.value}
               className="btn"
               data-kind={b.kind ?? 'ghost'}
-              onClick={() => answer(d.id, b.value, checked)}
+              disabled={b === primary && !ready}
+              onClick={() => answer(d.id, b.value, checked, vals)}
             >
               {b.label}
             </button>

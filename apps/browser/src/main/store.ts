@@ -44,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   offerToSavePasswords: true,
   autoUpdate: true,
   channel: 'beta',
+  bookmarksPanel: true,
 }
 
 export interface SavedTab {
@@ -60,6 +61,7 @@ export interface Persisted {
   settings: Settings
   spaces: Space[]
   pins: Pin[]
+  folders?: string[]
   customThemes: Theme[]
   downloads: DownloadItem[]
   sitePerms: Record<string, Partial<Record<PermissionKey, PermissionValue>>>
@@ -135,6 +137,16 @@ export function initStore() {
     d.settings.autoUpdate = true
     d.migrated = 2
   }
+  // v3: bookmarks are one library for every Space; the first 8 pins that were shown stay on the homepage
+  if ((d.migrated ?? 0) < 3) {
+    let n = 0
+    for (const p of d.pins ?? []) {
+      p.home = p.favorite !== false && n < 8
+      if (p.home) n++
+    }
+    d.migrated = 3
+  }
+  d.folders ??= []
   if (!d.spaces?.length) d.spaces = [DEFAULT_SPACE]
   // anything that was mid-download when we last quit did not finish
   for (const x of d.downloads)

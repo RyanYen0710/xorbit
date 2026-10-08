@@ -25,7 +25,7 @@ const SECTIONS = [
   'Payment methods',
   'Downloads',
   'History',
-  'Pins & Bookmarks',
+  'Bookmarks',
   'Keyboard',
   'Profiles',
   'Extensions',
@@ -46,7 +46,7 @@ const SLUG: Record<string, Sec> = {
   themes: 'Themes',
   downloads: 'Downloads',
   history: 'History',
-  pins: 'Pins & Bookmarks',
+  pins: 'Bookmarks',
 }
 
 const SHORTCUTS: [string, string][] = [
@@ -149,16 +149,29 @@ export default function Settings() {
             <option value="system">System</option>
           </select>
         </Row>
-        <Row label="Sidebar position">
+        <Row
+          label="Sidebar layout"
+          hint="Default puts your tabs on the left and your bookmarks on the right. Opposite swaps them."
+        >
           <select
             className="field"
             value={set.railPosition}
             onChange={(e) => put('railPosition', e.target.value)}
-            aria-label="Sidebar position"
+            aria-label="Sidebar layout"
           >
-            <option value="left">Left</option>
-            <option value="right">Right</option>
+            <option value="left">Default</option>
+            <option value="right">Opposite</option>
           </select>
+        </Row>
+        <Row
+          label="Bookmarks sidebar"
+          hint="The second sidebar, on the opposite side from your tabs. Default: tabs on the left, bookmarks on the right. Opposite swaps them."
+        >
+          <Toggle
+            on={set.bookmarksPanel}
+            onChange={(v) => put('bookmarksPanel', v)}
+            label="Show the bookmarks sidebar"
+          />
         </Row>
         <Row label="Sidebar width" hint="Width of the expanded Mission Control.">
           <input
@@ -491,7 +504,7 @@ export default function Settings() {
     Account: <AccountSection />,
     Passwords: <PasswordsSection />,
     'Payment methods': <PaymentsSection />,
-    'Pins & Bookmarks': (
+    Bookmarks: (
       <EmbedContext.Provider value>
         <Suspense fallback={null}>
           <PinsPage />

@@ -39,8 +39,10 @@ export interface Pin {
   url: string
   favicon: string
   folder: string // '' = top level
-  /** shown in the sidebar's PINNED section (undefined counts as true); every pin is a bookmark on the New Tab grid */
+  /** legacy (the old sidebar PINNED section); no longer used */
   favorite?: boolean
+  /** shown as a tile on the New Tab page (at most 8 of these) */
+  home?: boolean
 }
 
 export interface TabInfo {
@@ -102,6 +104,7 @@ export interface Settings {
   offerToSavePasswords: boolean
   autoUpdate: boolean
   channel: 'stable' | 'beta' | 'developer'
+  bookmarksPanel: boolean // the bookmarks sidebar (on the side opposite the tabs)
 }
 
 export type OverlayMode =
@@ -143,10 +146,22 @@ export interface UpdaterState {
 }
 
 /** An X Orbit confirmation box (replaces the system dialog). */
+export interface DialogField {
+  name: string
+  label: string
+  value?: string
+  placeholder?: string
+  required?: boolean
+  /** when given the field is a drop-down; '' is shown as "No folder" */
+  options?: string[]
+}
 export interface DialogSpec {
   id: string
   title: string
   message: string
+  fields?: DialogField[]
+  error?: string
+  checkboxChecked?: boolean
   buttons: { label: string; value: string; kind?: 'primary' | 'danger' | 'ghost' }[]
   checkbox?: string
 }
@@ -176,6 +191,7 @@ export interface UIState {
   spaces: Space[]
   activeSpaceId: string
   pins: Pin[]
+  folders: string[] // every bookmark folder path, including empty ones
   downloads: DownloadItem[]
   settings: Settings
   theme: Theme
@@ -195,6 +211,7 @@ export interface UIState {
   updater: UpdaterState
   account: AccountState
   railPx: number
+  panelPx: number // width of the bookmarks sidebar right now (it glides in and out)
   topPx: number
   find: { active: number; total: number }
 }

@@ -31,6 +31,9 @@ import { isBrowser, readBookmarks, readBookmarksFile } from './bookmarks'
 import * as vault from './vault'
 import { copySecret } from './autofill'
 import * as account from './account'
+import { addSiteDialog, bookmarkMenu, folderDialog, folderMenu } from './bookmark-ui'
+import { addBookmark, movePinToFolder, toggleHome } from './library'
+import { fillIcons } from './favicons'
 
 const str = (v: unknown, max = 2000): string => (typeof v === 'string' && v.length <= max ? v : '')
 const bool = (v: unknown) => typeof v === 'boolean'
@@ -64,6 +67,7 @@ const SETTING_RULES: { [K in keyof Settings]?: (v: unknown) => boolean } = {
   askDownload: bool,
   offerToSavePasswords: bool,
   autoUpdate: bool,
+  bookmarksPanel: bool,
   channel: oneOf('stable', 'beta', 'developer'),
   onboarded: bool,
 }
@@ -85,28 +89,29 @@ const targetTab = (w: OrbitWindow, p: Payload, e: IpcMainInvokeEvent) =>
 
 /** Adds imported bookmarks as pins in the current Space (skipping ones already there). */
 function addImportedPins(
-  w: OrbitWindow,
+  _w: OrbitWindow,
   items: { title: string; url: string; folder: string }[],
   from: string,
 ) {
-  const have = new Set(db.data.pins.filter((x) => x.spaceId === w.activeSpaceId).map((x) => x.url))
+  const have = new Set(db.data.pins.map((x) => x.url))
   let n = 0
   for (const b of items) {
     if (have.has(b.url)) continue
     have.add(b.url)
     db.data.pins.push({
       id: uid(),
-      spaceId: w.activeSpaceId,
+      spaceId: db.data.spaces[0]?.id ?? '',
       title: b.title,
       url: b.url,
       favicon: '',
       folder: b.folder,
-      favorite: false,
+      home: false,
     })
     n++
   }
   db.save()
   broadcast()
+  void fillIcons() // bookmark icons are fetched in the background
   return n
     ? `Imported ${n} bookmark${n === 1 ? '' : 's'} from ${from}`
     : `No new bookmarks in ${from}`
@@ -174,6 +179,12 @@ const ACT: Record<string, Handler> = {
       str(p.id, 64),
       typeof p.value === 'string' ? str(p.value, 64) : null,
       !!p.checked,
+      Object.fromEntries(
+        Object.entries(p.values && typeof p.values === 'object' ? p.values : {})
+          .filter(([k, v]) => k.length <= 24 && typeof v === 'string')
+          .slice(0, 8)
+          .map(([k, v]) => [k, str(v, 2000)]),
+      ),
     ),
   openInternal: (w, p) =>
     TAB_PAGES.includes(str(p.page)) && w.openInternal(str(p.page), str(p.section, 20) || undefined),
@@ -201,32 +212,33 @@ const ACT: Record<string, Handler> = {
   },
   deleteSpace: (_w, p) => deleteSpace(str(p.id)),
   pinPage: (w, p) => pinPage(w, str(p.id) || undefined),
-  addBookmark: (w, p) => {
-    let u: URL
-    try {
-      u = new URL(
-        /^https?:\/\//i.test(str(p.url, 2000)) ? str(p.url, 2000) : 'https://' + str(p.url, 2000),
-      )
-    } catch {
-      return 'That doesn’t look like a web address'
-    }
-    if (!/^https?:$/.test(u.protocol) || (!u.hostname.includes('.') && u.hostname !== 'localhost'))
-      return 'That doesn’t look like a web address'
-    if (db.data.pins.some((x) => x.url === u.href && x.spaceId === w.activeSpaceId))
-      return 'Already bookmarked'
-    db.data.pins.push({
-      id: uid(),
-      spaceId: w.activeSpaceId,
-      title: str(p.title, 200) || u.host.replace(/^www\./, ''),
-      url: u.href,
-      favicon: '',
-      folder: '',
-      favorite: false,
+  addBookmark: (_w, p) => {
+    const r = addBookmark({
+      url: str(p.url, 2000),
+      title: str(p.title, 200),
+      folder: str(p.folder, 200),
+      home: !!p.home,
     })
-    db.save()
-    broadcast()
-    return 'Added'
+    return r.startsWith('!') ? r.slice(1) : r
   },
+  // the bookmark library (right sidebar) and the homepage pins (at most 8)
+  bookmarkAddDialog: (w, p) => {
+    const t = w.activeTab
+    const cur = p.current && t && /^https?:/.test(t.url) ? t : null
+    return addSiteDialog(w, {
+      url: cur?.url ?? '',
+      title: cur?.title ?? '',
+      folder: str(p.folder, 200),
+      home: !!p.home,
+    })
+  },
+  folderAddDialog: (w, p) => folderDialog(w, str(p.parent, 200)),
+  bookmarkMenu: (w, p) => bookmarkMenu(w, str(p.id, 64)),
+  folderMenu: (w, p) => folderMenu(w, str(p.path, 200)),
+  bookmarkHome: (_w, p) => toggleHome(str(p.id, 64)),
+  bookmarkMove: (_w, p) => movePinToFolder(str(p.id, 64), str(p.folder, 200)),
+  bookmarkIcons: () => (void fillIcons(), 'ok'),
+  toggleBookmarks: (w) => w.toggleBookmarks(),
   importBookmarks: (w, p) => {
     const id = str(p.browser, 10)
     if (!isBrowser(id)) return 'Unknown browser'
@@ -314,13 +326,6 @@ const ACT: Record<string, Handler> = {
       /* vault unavailable */
     }
   },
-  favoritePin: (_w, p) => {
-    const x = db.data.pins.find((y) => y.id === p.id)
-    if (!x) return
-    x.favorite = x.favorite === false
-    db.save()
-    broadcast()
-  },
   unpin: (_w, p) => {
     db.data.pins = db.data.pins.filter((x) => x.id !== p.id)
     db.save()
@@ -329,7 +334,7 @@ const ACT: Record<string, Handler> = {
   updatePin: (_w, p) => {
     const x = db.data.pins.find((y) => y.id === p.id)
     if (!x) return
-    if (typeof p.folder === 'string') x.folder = str(p.folder, 40)
+    if (typeof p.folder === 'string') x.folder = str(p.folder, 200)
     if (str(p.title, 200)) x.title = str(p.title, 200)
     db.save()
     broadcast()

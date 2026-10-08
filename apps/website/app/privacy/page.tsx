@@ -89,8 +89,10 @@ export default function Privacy() {
           <h3>What leaves your computer</h3>
           <p>
             The sites you visit and the search provider you choose see your requests, like in any
-            browser. Installed builds check GitHub Releases for updates. This version contains no
-            analytics or telemetry code.
+            browser. Installed builds check GitHub Releases for updates. A bookmark’s icon is
+            fetched straight from that site (never through a third-party icon service), and the X
+            Orbit account, if you use one, talks to Google’s sign-in and database services. This
+            version contains no analytics or telemetry code.
           </p>
           <h3>Private windows</h3>
           <p>

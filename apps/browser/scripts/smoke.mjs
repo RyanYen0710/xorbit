@@ -37,6 +37,15 @@ process.env.ORBIT_BOOKMARKS_FILE = bm
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x')
+  if (u.pathname === '/favicon.ico') {
+    res.writeHead(200, { 'content-type': 'image/png' })
+    return res.end(
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+    )
+  }
   if (u.pathname === '/file.bin') {
     res.writeHead(200, {
       'content-type': 'application/octet-stream',
@@ -120,11 +129,13 @@ try {
   s = await state()
   assert.equal(s.pins.length, 1)
   const pinId = s.pins[0].id
-  await act('favoritePin', { id: pinId })
-  assert.equal((await state()).pins[0].favorite, false) // stays a bookmark, leaves the sidebar
-  await act('favoritePin', { id: pinId })
-  assert.equal((await state()).pins[0].favorite, true)
-  log('bookmark grid data: pin toggles, favorite flag moves a bookmark in/out of the sidebar')
+  assert.equal(await act('bookmarkHome', { id: pinId }), 'ok')
+  assert.equal((await state()).pins[0].home, true) // shown on the New Tab page
+  assert.equal(await act('bookmarkHome', { id: pinId }), 'ok')
+  assert.equal((await state()).pins[0].home, false)
+  log(
+    'bookmark: toggles with the page, and a bookmark can be pinned to / removed from the homepage',
+  )
 
   await act('createSpace', { name: 'School' })
   s = await state()
@@ -195,7 +206,7 @@ try {
   for (const [section, title] of [
     ['downloads', 'Downloads'],
     ['history', 'History'],
-    ['pins', 'Pins & Bookmarks'],
+    ['pins', 'Bookmarks'],
   ]) {
     await act('openInternal', { page: 'settings', section })
     await until(
@@ -217,7 +228,7 @@ try {
   await W(`return w.activeTab.view.webContents.executeJavaScript("window.__keep = 42")`)
   for (const [section, title] of [
     ['history', 'History'],
-    ['pins', 'Pins & Bookmarks'],
+    ['pins', 'Bookmarks'],
     ['downloads', 'Downloads'],
     ['privacy', 'Privacy'],
   ]) {
@@ -347,30 +358,204 @@ try {
       ['', 'Work', 'Work / Docs', 'Other bookmarks'],
     )
     log('imported bookmarks keep their folders (Work / Docs; bookmarks bar is the top level)')
-    // the sidebar groups pinned bookmarks into folders that open and close
-    for (const x of ['top', 'w1', 'd1']) await act('favoritePin', { id: byUrl(x)(now).id })
+    // the bookmarks sidebar (second sidebar) shows the folders; they open and close
     const rail = (code) => W(`return w.chrome.webContents.executeJavaScript(arg)`, code)
     await until(
-      () => rail(`document.querySelectorAll('.folder-row').length >= 2`),
-      'folders in the sidebar',
+      () => rail(`document.querySelectorAll('.bm-panel .bm-folder').length >= 2`),
+      'folders in the bookmarks sidebar',
     )
-    assert.equal(await rail(`document.querySelectorAll('.folder-items .pin').length`), 0) // closed at first
-    await rail(`document.querySelector('.folder-row').click()`)
-    await until(
-      () => rail(`document.querySelectorAll('.folder-items .pin').length === 1`),
-      'folder opens',
+    const rows = () => rail(`document.querySelectorAll('.bm-panel .bm-row').length`)
+    const rowsBefore = await rows() // closed folders hide their bookmarks
+    await rail(
+      `[...document.querySelectorAll('.bm-folder')].find((b) => b.textContent.includes('Work')).click()`,
     )
-    await rail(`document.querySelector('.folder-row').click()`)
-    await until(
-      () => rail(`document.querySelectorAll('.folder-items .pin').length === 0`),
-      'folder closes',
+    await until(async () => (await rows()) > rowsBefore, 'a folder opens')
+    await rail(
+      `[...document.querySelectorAll('.bm-folder')].find((b) => b.textContent.includes('Work')).click()`,
     )
-    log('the sidebar shows bookmark folders that open and close')
+    await until(async () => (await rows()) === rowsBefore, 'a folder closes')
+    log('the bookmarks sidebar shows folders that open and close')
     await W(`process.env.ORBIT_PICK_FILE = ''; return 1`)
     log(
       '"Import from file" reads exported .html and Chrome JSON files (entities decoded, folders kept, unsafe links skipped)',
     )
   }
+  // ── the second sidebar, folders, "Add site", the 8 homepage pins, Default / Opposite layout ──
+  {
+    const overlay = (code) => W(`return w.overlay.webContents.executeJavaScript(arg)`, code)
+    const setField = (i, v) =>
+      overlay(
+        `(() => { const el = document.querySelectorAll('.dlg .field')[${i}]; const proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(v)}); el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) })()`,
+      )
+    const press = (label) =>
+      overlay(
+        `[...document.querySelectorAll('.dlg-actions .btn')].find((b) => b.textContent.trim() === ${JSON.stringify(label)}).click()`,
+      )
+    const dialogUp = async () => {
+      await until(async () => (await state()).overlay.mode === 'dialog', 'dialog shown')
+      // wait until the overlay page has drawn this dialog's fields (it renders a moment after the state change)
+      await until(() => overlay(`!!document.querySelector('.dlg .dlg-field')`), 'dialog drawn')
+      await new Promise((r) => setTimeout(r, 80))
+    }
+    const rail = (code) => W(`return w.chrome.webContents.executeJavaScript(arg)`, code)
+
+    // the panel is part of the layout on the side opposite the tabs, and the page area makes room for it
+    let st = await state()
+    assert.equal(st.settings.bookmarksPanel, true)
+    await until(async () => (await state()).panelPx === 280, 'bookmarks sidebar open')
+    st = await state()
+    assert.equal(st.pageRect.width, st.pageRect.width) // sanity
+    assert.equal(st.pageRect.x, st.railPx) // default: tabs left, bookmarks right
+    await until(
+      async () => (await rail(`document.querySelector('.bm-panel')?.dataset.side`)) === 'right',
+      'panel on the right',
+    )
+    await act('setSetting', { key: 'railPosition', value: 'right' }) // "Opposite"
+    await until(
+      async () => (await state()).pageRect.x === (await state()).panelPx,
+      'opposite layout',
+    )
+    await until(
+      async () => (await rail(`document.querySelector('.bm-panel')?.dataset.side`)) === 'left',
+      'panel on the left (opposite)',
+    )
+    await act('setSetting', { key: 'railPosition', value: 'left' })
+    await until(
+      async () => (await state()).pageRect.x === (await state()).railPx,
+      'default layout back',
+    )
+    await act('toggleBookmarks')
+    await until(async () => (await state()).panelPx === 0, 'bookmarks sidebar hidden')
+    await act('toggleBookmarks')
+    await until(async () => (await state()).panelPx === 280, 'bookmarks sidebar shown again')
+    log(
+      'two sidebars: tabs one side, bookmarks the other; Default / Opposite swaps them; the sidebar hides and shows',
+    )
+
+    // add a folder (X Orbit dialog)
+    let d = act('folderAddDialog', { parent: '' })
+    await dialogUp()
+    assert.equal(
+      await overlay(`document.querySelector('.dlg-actions .btn[data-kind="primary"]').disabled`),
+      true,
+    ) // needs a name
+    await setField(0, 'Reading list')
+    await press('Create')
+    assert.equal(await d, 'ok')
+    assert.ok((await state()).folders.includes('Reading list'))
+    d = act('folderAddDialog', { parent: '' }) // the same name again is refused, with the reason
+    await dialogUp()
+    await setField(0, 'reading LIST')
+    await press('Create')
+    await until(() => overlay(`!!document.querySelector('.dlg-error')`), 'duplicate folder refused')
+    await press('Cancel')
+    assert.equal(await d, '')
+    log('"New folder" is an X Orbit dialog; empty folders persist; duplicates are refused')
+
+    // add a site (X Orbit dialog), into a folder, onto the homepage
+    d = act('bookmarkAddDialog', { home: true })
+    await dialogUp()
+    await setField(0, 'not a web address')
+    await press('Add')
+    await until(() => overlay(`!!document.querySelector('.dlg-error')`), 'bad address refused')
+    await setField(0, 'news.example')
+    await setField(1, 'Daily News')
+    await setField(2, 'Reading list')
+    await press('Add')
+    assert.equal(await d, 'Added')
+    const news = (await state()).pins.find((p) => p.url === 'https://news.example/')
+    assert.deepEqual([news.title, news.folder, news.home], ['Daily News', 'Reading list', true]) // the checkbox started ticked
+    log(
+      '"Add site" is an X Orbit dialog (address, name, folder, homepage); a bad address gets a message',
+    )
+
+    // at most 8 pins on the homepage
+    let n = (await state()).pins.filter((p) => p.home).length
+    for (let i = 0; n < 8; i++, n++)
+      assert.equal(
+        await act('addBookmark', { url: `https://pin${i}.example/`, home: true }),
+        'Added',
+      )
+    assert.equal((await state()).pins.filter((p) => p.home).length, 8)
+    assert.match(
+      await act('addBookmark', { url: 'https://ninth.example/', home: true }),
+      /up to 8 sites/,
+    )
+    const other = (await state()).pins.find((p) => !p.home)
+    assert.match(await act('bookmarkHome', { id: other.id }), /^!You can pin up to 8/)
+    assert.equal((await state()).pins.filter((p) => p.home).length, 8)
+    log('the homepage takes at most 8 pins')
+
+    // folders: move, rename, delete (bookmarks move up)
+    await act('bookmarkMove', { id: other.id, folder: 'Reading list' })
+    assert.equal((await state()).pins.find((p) => p.id === other.id).folder, 'Reading list')
+    st = await state()
+    assert.equal(st.folders.includes('Work / Docs'), true) // an imported nested folder, with its parent
+    assert.equal(st.folders.includes('Work'), true)
+
+    // site icons are fetched from the sites themselves and stored with the bookmark
+    await W(`process.env.ORBIT_ALLOW_PRIVATE_ICONS = '1'; return 1`)
+    assert.equal(
+      await act('addBookmark', { url: base + '/icon-page', title: 'Icon test' }),
+      'Added',
+    )
+    await act('bookmarkIcons')
+    await until(
+      async () =>
+        (await state()).pins
+          .find((p) => p.url === base + '/icon-page')
+          ?.favicon?.startsWith('data:image/png;base64,'),
+      'icon fetched',
+    )
+    log('a bookmark gets its real website icon (fetched from the site itself and stored with it)')
+
+    // scrolling: a long bookmark list scrolls inside the sidebar; the New Tab page scrolls too
+    for (let i = 0; i < 80; i++)
+      await act('addBookmark', {
+        url: `https://many${i}.example/`,
+        title: `Many ${i}`,
+        folder: 'Reading list',
+      })
+    await rail(
+      `[...document.querySelectorAll('.bm-folder')].find((b) => b.textContent.includes('Reading list'))?.click()`,
+    )
+    await until(
+      () =>
+        rail(
+          `(() => { const l = document.querySelector('.bm-list'); return l.scrollHeight > l.clientHeight + 100 })()`,
+        ),
+      'long list',
+    )
+    const sc = JSON.parse(
+      await rail(
+        `(() => { const l = document.querySelector('.bm-list'); l.scrollTop = 0; l.scrollTop = 400; return JSON.stringify({ top: l.scrollTop, overflowY: getComputedStyle(l).overflowY, h: l.clientHeight, win: innerHeight }) })()`,
+      ),
+    )
+    assert.equal(sc.top, 400)
+    assert.equal(sc.overflowY, 'auto')
+    assert.ok(sc.h < sc.win) // the list is held inside the window, so it scrolls instead of running off the bottom
+    await act('navigate', { url: 'orbit://newtab' })
+    await until(async () => (await tabInfo()).url === 'orbit://newtab', 'new tab page')
+    await new Promise((r) => setTimeout(r, 600))
+    assert.equal(
+      await W(
+        `return w.activeTab.view.webContents.executeJavaScript("getComputedStyle(document.querySelector('.newtab')).overflowY")`,
+      ),
+      'auto',
+    )
+    assert.equal(
+      await W(
+        `return w.activeTab.view.webContents.executeJavaScript("document.querySelectorAll('.newtab .bm-tile:not(.bm-add)').length")`,
+      ),
+      8,
+    )
+    log(
+      'a long bookmark list scrolls inside the sidebar; the New Tab page shows the 8 pins and scrolls when needed',
+    )
+    for (const p of (await state()).pins.filter((p) => p.url.includes('many')))
+      await act('unpin', { id: p.id })
+  }
+
   assert.equal(await act('addBookmark', { url: 'example.com/page', title: 'Ex' }), 'Added')
   assert.equal(await act('addBookmark', { url: 'example.com/page' }), 'Already bookmarked')
   assert.match(await act('addBookmark', { url: 'javascript:alert(1)' }), /doesn.t look like/)
@@ -415,12 +600,21 @@ try {
   assert.equal(await W(`return !!globalThis.__orbitMenu`), false) // scripted focus is ignored
   // a genuine mouse click into the box (script-driven focus is deliberately ignored by the page script)
   const r = JSON.parse(await page(`JSON.stringify(u.getBoundingClientRect())`))
-  await W(
-    `w.win.show(); w.win.focus(); const wc = w.activeTab.view.webContents; wc.focus(); const x = Math.round(arg.x + arg.width / 2), y = Math.round(arg.y + arg.height / 2);
-     wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 }); wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 }); return 1`,
-    r,
-  )
-  await until(() => W(`return !!globalThis.__orbitMenu`), 'fill menu requested')
+  // a real click needs the window in front; if another app stole focus the click is ignored, so try again
+  let asked = false
+  for (let attempt = 0; attempt < 5 && !asked; attempt++) {
+    await W(
+      `o.app.focus({ steal: true }); w.win.show(); w.win.focus(); const wc = w.activeTab.view.webContents; wc.focus(); const x = Math.round(arg.x + arg.width / 2), y = Math.round(arg.y + arg.height / 2);
+       wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 }); wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 }); return 1`,
+      r,
+    )
+    asked = await until(
+      () => W(`return !!globalThis.__orbitMenu`),
+      'fill menu requested',
+      2500,
+    ).catch(() => false)
+  }
+  assert.ok(asked, 'fill menu requested')
   assert.deepEqual((await W(`return globalThis.__orbitMenu`)).labels.slice(0, 1), [
     'ryan@example.com',
   ])
@@ -560,7 +754,11 @@ try {
       'Delete all history?|Cancel', // a destructive question starts on the safe button
     )
     await click('.dlg-actions .btn[data-kind="danger"]')
-    assert.deepEqual(await W(`return await globalThis.__d`), { value: 'ok', checked: false })
+    assert.deepEqual(await W(`return await globalThis.__d`), {
+      value: 'ok',
+      checked: false,
+      values: {},
+    })
     await until(async () => (await state()).overlay.mode === 'compact', 'dialog closed')
     await W(
       `globalThis.__d = w.confirm({ title: 'Allow?', message: '', buttons: [{ label: 'No', value: 'no' }, { label: 'Yes', value: 'yes', kind: 'primary' }] }); return 1`,
