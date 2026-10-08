@@ -282,6 +282,42 @@ try {
     log(
       'bookmark import reads every Chrome profile and AccountBookmarks, skips System Profile and duplicates',
     )
+    // "Import from file": an exported .html file and Chrome's own JSON file, picked through a normal file chooser
+    const html = path.join(tmp, 'export.html')
+    fs.writeFileSync(
+      html,
+      `<!DOCTYPE NETSCAPE-Bookmark-file-1><DL><p><DT><H3>Bookmarks bar</H3><DL><p><DT><A HREF="https://html-a.example/?x=1&amp;y=2" ADD_DATE="1">Alpha &amp; Co</A><DT><H3>Sub</H3><DL><p><DT><A HREF="https://html-b.example/">Beta</A></DL><p><DT><A HREF="javascript:alert(1)">Evil</A><DT><A HREF="https://html-a.example/?x=1&amp;y=2">Dup</A></DL><p></DL>`,
+    )
+    await W(`process.env.ORBIT_PICK_FILE = arg; return 1`, html)
+    assert.match(await act('importBookmarksFile'), /Imported 2 bookmarks from the file/)
+    const pins = (await state()).pins
+    assert.equal(pins.find((p) => p.url === 'https://html-a.example/?x=1&y=2')?.title, 'Alpha & Co')
+    assert.equal(pins.find((p) => p.url === 'https://html-b.example/')?.folder, 'Bookmarks bar')
+    assert.ok(!pins.some((p) => p.url.startsWith('javascript:')))
+    assert.match(await act('importBookmarksFile'), /No new bookmarks/)
+    const json = path.join(tmp, 'AccountBookmarks')
+    fs.writeFileSync(
+      json,
+      JSON.stringify({
+        roots: {
+          bookmark_bar: {
+            name: 'Bar',
+            type: 'folder',
+            children: [{ type: 'url', name: 'J', url: 'https://json-file.example/' }],
+          },
+        },
+      }),
+    )
+    await W(`process.env.ORBIT_PICK_FILE = arg; return 1`, json)
+    assert.match(await act('importBookmarksFile'), /Imported 1 bookmark from the file/)
+    const junk = path.join(tmp, 'notes.txt')
+    fs.writeFileSync(junk, 'hello')
+    await W(`process.env.ORBIT_PICK_FILE = arg; return 1`, junk)
+    assert.match(await act('importBookmarksFile'), /no bookmarks/)
+    await W(`process.env.ORBIT_PICK_FILE = ''; return 1`)
+    log(
+      '"Import from file" reads exported .html and Chrome JSON files (entities decoded, folders kept, unsafe links skipped)',
+    )
   }
   assert.equal(await act('addBookmark', { url: 'example.com/page', title: 'Ex' }), 'Added')
   assert.equal(await act('addBookmark', { url: 'example.com/page' }), 'Already bookmarked')
@@ -417,7 +453,9 @@ try {
       async () => (await state()).railPx === 4 && (await state()).topPx === 0,
       'rail tucked away',
     )
-    assert.ok(sawMiddle, 'the rail glided instead of jumping')
+    // (a locked or sleeping screen has no visible window, and then the app correctly skips the animation)
+    if (await W(`return w.win.isVisible()`))
+      assert.ok(sawMiddle, 'the rail glided instead of jumping')
     assert.equal((await state()).pageRect.x, 4)
     await until(
       () =>

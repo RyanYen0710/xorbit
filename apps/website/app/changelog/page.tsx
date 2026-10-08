@@ -5,6 +5,13 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.6',
+    channel: 'Beta',
+    items: [
+      'Import bookmarks from a file: choose Chrome’s exported bookmarks file (or Chrome’s own bookmarks file) in Settings → Pins → Import from file. This always works, even when macOS blocks X Orbit from reading Chrome’s folder.',
+    ],
+  },
+  {
     v: '0.1.5',
     channel: 'Beta',
     items: [

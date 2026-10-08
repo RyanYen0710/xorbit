@@ -390,6 +390,20 @@ export async function saveJson(w: OrbitWindow, name: string, data: unknown) {
   if (!r.canceled && r.filePath) fs.writeFileSync(r.filePath, JSON.stringify(data, null, 2))
   return !r.canceled
 }
+/** The "Import from file" picker. (A normal file chooser: macOS always allows reading a file the person picked.) */
+export async function pickBookmarksFile(w: OrbitWindow): Promise<string | null> {
+  if (process.env.ORBIT_TEST && process.env.ORBIT_PICK_FILE) return process.env.ORBIT_PICK_FILE
+  const r = await dialog.showOpenDialog(w.win, {
+    title: 'Choose a bookmarks file',
+    defaultPath: app.getPath('downloads'),
+    properties: ['openFile'],
+    filters: [
+      { name: 'Bookmarks (.html or Chrome file)', extensions: ['html', 'htm', 'json'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  })
+  return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
+}
 export async function openJson(w: OrbitWindow): Promise<unknown | null> {
   const r = await dialog.showOpenDialog(w.win, {
     properties: ['openFile'],

@@ -19,6 +19,9 @@ export default function Pins() {
         <button className="btn ghost" onClick={async () => setMsg(await act('importPins'))}>
           Import JSON
         </button>
+        <button className="btn" onClick={async () => setMsg(await act('importBookmarksFile'))}>
+          Import from file…
+        </button>
         {(['chrome', 'edge', 'brave'] as const).map((b) => (
           <button
             key={b}
@@ -30,6 +33,10 @@ export default function Pins() {
         ))}
         {msg && <span className="orbit-label">{msg}</span>}
       </div>
+      <p className="srow-hint">
+        Chrome bookmarks: in Chrome open the Bookmark Manager (⌥⌘B), choose ⋮ → Export bookmarks,
+        then use “Import from file…” and pick the saved file.
+      </p>
       {s.pins.length === 0 && (
         <Empty title="NO PINS YET">Pin a page to keep it one click away.</Empty>
       )}

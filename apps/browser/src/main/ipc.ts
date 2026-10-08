@@ -19,6 +19,7 @@ import {
   createSpace,
   deleteSpace,
   openJson,
+  pickBookmarksFile,
   paletteItems,
   pinPage,
   runCommand,
@@ -26,7 +27,7 @@ import {
   suggest,
 } from './commands'
 import { sessionFor } from './session'
-import { isBrowser, readBookmarks } from './bookmarks'
+import { isBrowser, readBookmarks, readBookmarksFile } from './bookmarks'
 import * as vault from './vault'
 import { copySecret } from './autofill'
 import * as account from './account'
@@ -81,6 +82,35 @@ type Payload = Record<string, any>
 type Handler = (w: OrbitWindow, p: Payload, e: IpcMainInvokeEvent) => unknown
 const targetTab = (w: OrbitWindow, p: Payload, e: IpcMainInvokeEvent) =>
   w.tab(str(p.tabId)) ?? w.tabByContents(e.sender.id) ?? w.activeTab
+
+/** Adds imported bookmarks as pins in the current Space (skipping ones already there). */
+function addImportedPins(
+  w: OrbitWindow,
+  items: { title: string; url: string; folder: string }[],
+  from: string,
+) {
+  const have = new Set(db.data.pins.filter((x) => x.spaceId === w.activeSpaceId).map((x) => x.url))
+  let n = 0
+  for (const b of items) {
+    if (have.has(b.url)) continue
+    have.add(b.url)
+    db.data.pins.push({
+      id: uid(),
+      spaceId: w.activeSpaceId,
+      title: b.title,
+      url: b.url,
+      favicon: '',
+      folder: b.folder,
+      favorite: false,
+    })
+    n++
+  }
+  db.save()
+  broadcast()
+  return n
+    ? `Imported ${n} bookmark${n === 1 ? '' : 's'} from ${from}`
+    : `No new bookmarks in ${from}`
+}
 
 const ACT: Record<string, Handler> = {
   // tabs
@@ -201,30 +231,17 @@ const ACT: Record<string, Handler> = {
     const id = str(p.browser, 10)
     if (!isBrowser(id)) return 'Unknown browser'
     const r = readBookmarks(id)
-    if (!r) return `Couldn’t find ${id[0].toUpperCase() + id.slice(1)} bookmarks on this computer`
-    const have = new Set(
-      db.data.pins.filter((x) => x.spaceId === w.activeSpaceId).map((x) => x.url),
-    )
-    let n = 0
-    for (const b of r.items) {
-      if (have.has(b.url)) continue
-      have.add(b.url)
-      db.data.pins.push({
-        id: uid(),
-        spaceId: w.activeSpaceId,
-        title: b.title,
-        url: b.url,
-        favicon: '',
-        folder: b.folder,
-        favorite: false,
-      })
-      n++
-    }
-    db.save()
-    broadcast()
-    return n
-      ? `Imported ${n} bookmark${n === 1 ? '' : 's'} from ${r.label}`
-      : `No new bookmarks in ${r.label}`
+    const name = id[0].toUpperCase() + id.slice(1)
+    if (!r)
+      return `Couldn’t find ${name} bookmarks (macOS may be blocking X Orbit from reading them). Use “Import from file” instead.`
+    return addImportedPins(w, r.items, r.label)
+  },
+  importBookmarksFile: async (w) => {
+    const file = await pickBookmarksFile(w)
+    if (!file) return ''
+    const items = readBookmarksFile(file)
+    if (!items?.length) return 'That file has no bookmarks X Orbit can read'
+    return addImportedPins(w, items, 'the file')
   },
   // ── saved passwords & cards (encrypted vault; see vault.ts) ──
   vaultAddLogin: (_w, p) => {
