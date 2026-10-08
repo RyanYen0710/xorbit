@@ -5,6 +5,14 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.5',
+    channel: 'Beta',
+    items: [
+      'Fixes X Orbit not opening after an update: macOS asked for Keychain permission and the app waited behind that prompt. X Orbit is now signed with one fixed certificate, so macOS keeps trusting it across updates. After installing 0.1.5 you may see the prompt one last time: enter your Mac password and choose Always Allow.',
+      'The app no longer touches the Keychain at startup, and an update must be signed by the same certificate as the installed app.',
+    ],
+  },
+  {
     v: '0.1.4',
     channel: 'Beta',
     items: [

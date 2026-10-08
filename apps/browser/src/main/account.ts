@@ -96,21 +96,65 @@ const idt = (method: string, body: unknown) => call(`${IDT}/${method}?key=${API_
 // ── session + storage ───────────────────────────────────────────────────────
 let sess: { idToken: string; refreshToken: string; exp: number } | null = null
 const file = () => path.join(app.getPath('userData'), 'account.bin')
+// A plain, non-secret copy of what the page shows (email, name, verified) so the app can say "signed in as ..." without
+// touching the macOS Keychain. The Keychain is only used when a token is actually needed: each update has a new signature,
+// and macOS asks permission again, so asking at launch would freeze the app behind that prompt.
+const hintFile = () => path.join(app.getPath('userData'), 'account-hint.json')
+/** Every use of the OS keychain goes through here (tests assert that startup makes none). */
+const keychain = <T>(fn: () => T): T => {
+  const g = globalThis as { __orbitKeychainTouches?: number }
+  g.__orbitKeychainTouches = (g.__orbitKeychainTouches ?? 0) + 1
+  return fn()
+}
+
+/** A saved sign-in exists but its token has not been read from the Keychain yet. */
+let locked = false
 
 function persist() {
-  if (!sess || !protection().ok) return // never store a token without real OS encryption
-  const blob = JSON.stringify({
-    v: 1,
-    refreshToken: sess.refreshToken,
-    profile: { ...st, busy: false },
-  })
+  if (!sess || !keychain(() => protection().ok)) return // never store a token without real OS encryption
+  const blob = JSON.stringify({ v: 1, refreshToken: sess.refreshToken })
   fs.mkdirSync(path.dirname(file()), { recursive: true })
-  fs.writeFileSync(file() + '.tmp', safeStorage.encryptString(blob), { mode: 0o600 })
+  fs.writeFileSync(
+    file() + '.tmp',
+    keychain(() => safeStorage.encryptString(blob)),
+    { mode: 0o600 },
+  )
   fs.renameSync(file() + '.tmp', file())
+  const { email, name, verified, providers } = st
+  fs.writeFileSync(hintFile(), JSON.stringify({ email, name, verified, providers }), {
+    mode: 0o600,
+  })
 }
 function forget() {
   sess = null
+  locked = false
   fs.rmSync(file(), { force: true })
+  fs.rmSync(hintFile(), { force: true })
+}
+
+/** Reads the saved token (the one place that may make macOS ask for Keychain access) and confirms it with the server. */
+async function unlock() {
+  if (!locked) return
+  locked = false
+  try {
+    const saved = JSON.parse(keychain(() => safeStorage.decryptString(fs.readFileSync(file()))))
+    if (!saved?.refreshToken) throw new Error('empty')
+    sess = { idToken: '', refreshToken: saved.refreshToken, exp: 0 }
+  } catch {
+    // unreadable (for example Keychain access was refused): treat as signed out rather than half-working
+    signOutLocal()
+    return
+  }
+  try {
+    await loadProfile()
+  } catch {
+    set({ loading: false }) // offline: keep showing the saved profile; a revoked sign-in already signed itself out
+  }
+}
+/** The Account page opened: this is when a saved sign-in is unlocked, never at launch. */
+export function open() {
+  if (locked) setImmediate(() => void unlock())
+  return 'ok'
 }
 
 function adopt(r: { idToken: string; refreshToken: string; expiresIn?: string }) {
@@ -122,6 +166,7 @@ function adopt(r: { idToken: string; refreshToken: string; expiresIn?: string })
 }
 /** A valid ID token, refreshed when it is about to expire. */
 async function token(): Promise<string> {
+  if (locked) await unlock()
   if (!sess) throw new AccountError('Sign in first.')
   if (sess.exp - Date.now() > 120_000) return sess.idToken
   try {
@@ -407,28 +452,22 @@ export function googleCancel() {
 }
 
 // ── startup ─────────────────────────────────────────────────────────────────
-export async function initAccount() {
-  let saved: { refreshToken?: string; profile?: Partial<AccountState> } | null = null
+/** Shows a saved sign-in from the plain hint file. Never touches the Keychain: that waits until the Account page opens. */
+export function initAccount() {
+  if (!fs.existsSync(file())) return
+  let h: Partial<AccountState> = {}
   try {
-    if (protection().ok) saved = JSON.parse(safeStorage.decryptString(fs.readFileSync(file())))
+    h = JSON.parse(fs.readFileSync(hintFile(), 'utf8'))
   } catch {
-    /* nothing saved, or it cannot be read: start signed out */
+    /* no hint: the page will say "checking" until it is opened */
   }
-  if (!saved?.refreshToken) return
-  // Show the saved profile at once; confirm with the server in the background.
-  sess = { idToken: '', refreshToken: saved.refreshToken, exp: 0 }
-  const p = saved.profile ?? {}
+  locked = true
   set({
     signedIn: true,
     loading: true,
-    email: p.email ?? '',
-    name: p.name ?? '',
-    verified: !!p.verified,
-    providers: p.providers ?? [],
+    email: h.email ?? '',
+    name: h.name ?? '',
+    verified: !!h.verified,
+    providers: h.providers ?? [],
   })
-  try {
-    await loadProfile()
-  } catch {
-    set({ loading: false }) // offline: keep what we showed; a revoked sign-in already signed itself out
-  }
 }

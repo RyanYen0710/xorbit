@@ -29,25 +29,59 @@ fs.mkdirSync(stage)
 sh('/usr/bin/ditto', [SRC, `${stage}/X Orbit.app`])
 for (const k of ['CFBundleShortVersionString', 'CFBundleVersion'])
   sh('/usr/bin/plutil', ['-replace', k, '-string', NEW, `${stage}/X Orbit.app/Contents/Info.plist`])
-sh('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', `${stage}/X Orbit.app`])
+// sign the pretend update the same way the real build is (same local identity if present, else ad-hoc)
+const kc = path.resolve('../../.tools/signing/orbit-signing.keychain-db')
+let signArgs = ['--sign', '-']
+if (fs.existsSync(kc)) {
+  sh('security', [
+    'unlock-keychain',
+    '-p',
+    fs.readFileSync(path.resolve('../../.tools/signing/keychain-password.txt'), 'utf8').trim(),
+    kc,
+  ])
+  const id = /([0-9A-F]{40}) "X Orbit Code Signing"/.exec(
+    sh('security', ['find-identity', '-p', 'codesigning', kc]),
+  )[1]
+  signArgs = ['--sign', id, '--keychain', kc]
+}
+sh('/usr/bin/codesign', ['--force', '--deep', ...signArgs, `${stage}/X Orbit.app`])
 const zip = `X-Orbit-${NEW}-arm64.zip`
 sh('/usr/bin/ditto', ['-c', '-k', '--keepParent', `${stage}/X Orbit.app`, path.join(feedDir, zip)])
 const zbuf = fs.readFileSync(path.join(feedDir, zip))
+// a look-alike update signed by someone else (ad-hoc), for the "different publisher" check
+const strangerStage = path.join(tmp, 'stranger')
+fs.mkdirSync(strangerStage)
+sh('/usr/bin/ditto', [`${stage}/X Orbit.app`, `${strangerStage}/X Orbit.app`])
+sh('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', `${strangerStage}/X Orbit.app`])
+sh('/usr/bin/ditto', [
+  '-c',
+  '-k',
+  '--keepParent',
+  `${strangerStage}/X Orbit.app`,
+  path.join(tmp, 'stranger.zip'),
+])
+const sbuf = fs.readFileSync(path.join(tmp, 'stranger.zip'))
+let serveStranger = false
 const sha = (b) => crypto.createHash('sha512').update(b).digest('base64')
-const yml = (hash) =>
-  `version: ${NEW}\nfiles:\n  - url: ${zip}\n    sha512: ${hash}\n    size: ${zbuf.length}\npath: ${zip}\nsha512: ${hash}\nreleaseDate: '2026-01-01T00:00:00.000Z'\n`
+const yml = (hash, size = zbuf.length) =>
+  `version: ${NEW}\nfiles:\n  - url: ${zip}\n    sha512: ${hash}\n    size: ${size}\npath: ${zip}\nsha512: ${hash}\nreleaseDate: '2026-01-01T00:00:00.000Z'\n`
 let goodHash = sha(zbuf)
+const strangerHash = sha(sbuf)
 let feedHash = goodHash
 const RATE = 24 * 1048576 // bytes per second
 const server = http.createServer((req, res) => {
-  if (req.url.endsWith('latest-mac.yml')) return res.end(yml(feedHash))
+  if (req.url.endsWith('latest-mac.yml'))
+    return res.end(
+      yml(serveStranger ? strangerHash : feedHash, serveStranger ? sbuf.length : zbuf.length),
+    )
   if (req.url.endsWith(zip)) {
-    res.writeHead(200, { 'content-type': 'application/zip', 'content-length': zbuf.length })
+    const body = serveStranger ? sbuf : zbuf
+    res.writeHead(200, { 'content-type': 'application/zip', 'content-length': body.length })
     let off = 0
     const tick = () => {
-      if (off >= zbuf.length || res.destroyed) return res.end()
+      if (off >= body.length || res.destroyed) return res.end()
       const n = Math.floor(RATE / 20)
-      res.write(zbuf.subarray(off, off + n))
+      res.write(body.subarray(off, off + n))
       off += n
       setTimeout(tick, 50)
     }
@@ -92,6 +126,19 @@ try {
     'a download that does not match its checksum is refused, the app is untouched, and Later hides the card',
   )
   await app.quit()
+
+  // 1b) an update signed by a different publisher is refused (only meaningful once the app has a certificate identity)
+  if (fs.existsSync(kc)) {
+    serveStranger = true
+    const other = install('other')
+    app = await run(other, path.join(tmp, 'uother'))
+    await until(async () => (await upd(app)).phase === 'error', 'publisher error', 60000)
+    assert.match((await upd(app)).message, /not signed by the same publisher/)
+    assert.equal(plist(other, 'CFBundleShortVersionString'), version)
+    log('an update signed by a different publisher is refused and the app is untouched')
+    await app.quit()
+    serveStranger = false
+  }
 
   // 2) the real thing
   feedHash = goodHash

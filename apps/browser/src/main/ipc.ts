@@ -482,6 +482,7 @@ const ACT: Record<string, Handler> = {
   accountGoogleCancel: () => account.googleCancel(),
   accountResend: () => account.resendVerification(),
   accountVerified: () => account.refreshVerified(),
+  accountOpen: () => account.open(),
   accountPoll: () => account.pollVerified(),
   accountReset: (_w, p) => account.resetPassword(str(p.email, 200)),
   accountSignOut: () => account.signOut(),

@@ -52,6 +52,11 @@ let pw
 try {
   await until(async () => (await app.state()).tabs.length > 0, 'tab')
   assert.equal((await acct()).signedIn, false)
+  assert.equal(
+    await W(`return globalThis.__orbitKeychainTouches ?? 0`),
+    0,
+    'a fresh start makes no keychain access',
+  )
 
   // ── email + password, with the same rules as the website ──
   assert.match(
@@ -109,15 +114,30 @@ try {
   )
   await app.quit()
   const app2 = await launch({ userData: path.join(tmp, 'user'), downloads: tmp })
+  await sleep(1500)
+  // Starting up must never touch the OS keychain (an update changes the app's signature and macOS then asks for
+  // permission, freezing the app behind that prompt). The saved sign-in is only unlocked when the Account page opens.
+  assert.equal(
+    await app2.W(`return globalThis.__orbitKeychainTouches ?? 0`),
+    0,
+    'startup made no keychain access',
+  )
+  assert.equal(await app2.W(`return w.state().account.signedIn`), true) // shown from the plain hint file
+  assert.equal(await app2.W(`return w.state().account.email`), 'pat@example.com')
+  assert.equal(await app2.act('accountOpen'), 'ok')
   await until(
-    async () => await app2.W(`return w.state().account.signedIn && !w.state().account.loading`),
-    'restored sign-in',
+    async () => await app2.W(`return !w.state().account.loading`),
+    'sign-in unlocked',
     15000,
+  )
+  assert.ok(
+    (await app2.W(`return globalThis.__orbitKeychainTouches ?? 0`)) > 0,
+    'unlocked on demand',
   )
   assert.equal(await app2.W(`return w.state().account.email`), 'pat@example.com')
   assert.equal(await app2.W(`return w.state().account.verified`), true)
   log(
-    'the sign-in is stored encrypted, keeps you signed in after a restart, and no token is ever in the page state',
+    'startup never touches the keychain; a saved sign-in is shown at once and unlocked only when the Account page opens',
   )
   assert.equal(await app2.act('accountSignOut'), 'ok')
   assert.ok(!fs.existsSync(file))

@@ -10,7 +10,7 @@ module.exports = {
   directories: { output: 'release', buildResources: 'resources' },
   files: ['out/**/*', 'package.json'],
   asar: true,
-  afterSign: 'scripts/adhoc-sign.cjs',
+  afterSign: 'scripts/sign-app.cjs',
   // Only publish/auto-update from GitHub when a repo is configured.
   ...(owner && repo ? { publish: [{ provider: 'github', owner, repo }] } : { publish: null }),
   protocols: [{ name: 'Web link', schemes: ['http', 'https'] }],
@@ -20,7 +20,7 @@ module.exports = {
       { target: 'dmg', arch: ['arm64', 'x64'] },
       { target: 'zip', arch: ['arm64', 'x64'] },
     ],
-    // Hardened runtime needs a real certificate; unsigned builds are sealed by scripts/adhoc-sign.cjs instead.
+    // Hardened runtime needs a real certificate; unsigned builds are sealed by scripts/sign-app.cjs instead.
     hardenedRuntime: Boolean(process.env.CSC_LINK),
     gatekeeperAssess: false,
     entitlements: 'resources/entitlements.mac.plist',

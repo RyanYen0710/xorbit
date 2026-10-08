@@ -60,7 +60,7 @@ void app.whenReady().then(() => {
   initIpc()
   initAutofill()
   initUpdater()
-  void initAccount()
+  initAccount()
   new OrbitWindow()
   setInterval(() => windows.forEach((w) => w.sweep()), 60_000)
   app.on('activate', () => {

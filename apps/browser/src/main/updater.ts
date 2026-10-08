@@ -112,6 +112,13 @@ const run = (cmd: string, args: string[]) =>
         : res(String(out).trim()),
     ),
   )
+/** The app's designated code requirement: "this app, signed by this certificate" (or a bare build hash for ad-hoc builds). */
+const requirement = (appPath: string) =>
+  new Promise<string>((res) =>
+    execFile('/usr/bin/codesign', ['-d', '-r-', appPath], (_e, out, err) =>
+      res(`${out}${err}`.split('\n').find((l) => l.startsWith('designated')) ?? ''),
+    ),
+  )
 const plist = (appPath: string, key: string) =>
   run('/usr/bin/plutil', [
     '-extract',
@@ -283,6 +290,10 @@ async function install(f: Feed, zip: string, dir: string) {
   await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', fresh]).catch(() => {
     throw new Error('the update’s signature is not valid, so it was not installed')
   })
+  // Once the installed app is signed with a certificate, updates must be signed with the very same one.
+  const mine = await requirement(target)
+  if (/certificate/.test(mine) && (await requirement(fresh)) !== mine)
+    throw new Error('the update is not signed by the same publisher, so it was not installed')
   const script = path.join(dir, 'apply.sh')
   fs.writeFileSync(script, APPLY, { mode: 0o700 })
   const result = path.join(app.getPath('userData'), 'update-result')

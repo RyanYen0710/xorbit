@@ -334,6 +334,10 @@ function SignedIn({ busy, waiting, error }: { busy: boolean; waiting: boolean; e
 
 export function AccountSection() {
   const a = useOrbit()!.account
+  // a saved sign-in is only unlocked (Keychain read) once this page is opened, never at launch
+  useEffect(() => {
+    void act('accountOpen')
+  }, [])
   // poll gently for the confirmation while the "confirm your email" screen is open
   useEffect(() => {
     if (!a.signedIn || a.verified || !a.providers.includes('password')) return

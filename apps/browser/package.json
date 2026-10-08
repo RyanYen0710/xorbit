@@ -1,7 +1,7 @@
 {
   "name": "@orbit/browser",
   "productName": "X Orbit",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "X Orbit \u2014 the web, reorbited.",
   "private": true,
   "main": "out/main/index.js",
