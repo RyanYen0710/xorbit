@@ -13,6 +13,7 @@ const ENTRIES = [
       'Every bookmark shows its website’s own icon, fetched straight from the site.',
       'Settings: the sidebar position is now Default or Opposite (tabs and bookmarks swap sides).',
       'Fixed the new tab page not scrolling when the bookmark list was long.',
+      'Windows: a first early test build (64-bit installer) is available on the Download page.',
     ],
   },
   {

@@ -1,0 +1,39 @@
+# Builds the Windows installer and attaches it to an EXISTING release (the one the Mac build is on), so the download page and the
+# updater keep finding everything in one place. Start it by hand: Actions -> "Windows installer" -> Run workflow -> tag (e.g. v0.1.8).
+# It is a test build: unsigned, so Windows SmartScreen will warn (see docs/distribution.md).
+name: Windows installer
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the installer to (for example v0.1.8)
+        required: true
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @orbit/browser build
+        env:
+          # the desktop app's sign-in key (Identity Toolkit + Token Service only); a repository secret, not in the repo
+          MAIN_VITE_FIREBASE_KEY: ${{ secrets.FIREBASE_DESKTOP_KEY }}
+      - name: Package (NSIS installer, 64-bit)
+        working-directory: apps/browser
+        run: pnpm exec electron-builder --config electron-builder.config.cjs --win nsis --x64 --publish never
+        env:
+          ORBIT_GH_OWNER: ${{ github.repository_owner }}
+          ORBIT_GH_REPO: ${{ github.event.repository.name }}
+      - name: Attach to the release
+        shell: bash
+        working-directory: apps/browser/release.noindex
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -la
+          gh release upload "${{ inputs.tag }}" *.exe latest.yml --clobber --repo "${{ github.repository }}"

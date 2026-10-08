@@ -1,9 +1,9 @@
-# Push a tag like v0.1.0 (or v0.2.0-beta.1) to build installers and attach them to a GitHub Release.
+# Manual only. X Orbit's Mac builds are made on the maintainer's Mac (signed with a local certificate the updater requires);
+# the Windows installer comes from windows.yml. This generic workflow is kept for a future fully-CI release.
 # Secrets are optional: without them the builds are unsigned (see docs/distribution.md).
 name: Release
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch: # manual only: Mac releases are built and signed locally, Windows has its own workflow (windows.yml)
 jobs:
   build:
     strategy:

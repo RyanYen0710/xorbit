@@ -25,7 +25,7 @@ export default async function Download() {
             <br />X ORBIT
           </>
         }
-        lede="Free desktop browser for Mac. Windows is coming soon."
+        lede="Free desktop browser. The Mac version is ready; Windows is an early test build."
       />
       <div className="container">
         <DownloadCards
@@ -66,6 +66,33 @@ export default async function Download() {
             Why the extra step? X Orbit is free and not yet signed with a paid Apple Developer ID,
             so macOS asks you to confirm it. Only do this for the file from this page. If you see
             &ldquo;X Orbit is damaged&rdquo;, you have the old 0.1.0 file &mdash; download it again.
+          </p>
+        </section>
+        <section
+          id="windows-install"
+          className="prose"
+          aria-labelledby="win-h"
+          style={{ marginTop: 32 }}
+        >
+          <div className="label">WINDOWS · EARLY TEST BUILD</div>
+          <h3 id="win-h">Installing on Windows</h3>
+          <ol style={{ paddingLeft: 20 }}>
+            <li>
+              Click <strong>Download</strong> on the Windows card above and open the{' '}
+              <code>.exe</code> file.
+            </li>
+            <li>
+              Windows may say <strong>&ldquo;Windows protected your PC&rdquo;</strong>. Click{' '}
+              <strong>More info</strong>, then <strong>Run anyway</strong>.
+            </li>
+            <li>Follow the installer, then open X Orbit from the Start menu.</li>
+          </ol>
+          <p className="muted small">
+            This is the first Windows build and it hasn&rsquo;t been checked on many computers yet.
+            If something doesn&rsquo;t work, please tell us on the{' '}
+            <a href="/support">Support page</a> with what you saw. The warning appears because the
+            free build isn&rsquo;t signed with a paid Windows certificate yet. Only install the file
+            from this page.
           </p>
         </section>
         <section
@@ -140,7 +167,7 @@ export default async function Download() {
             </tr>
             <tr>
               <td>Windows</td>
-              <td>Coming soon</td>
+              <td>Windows 10 or 11, 64-bit (early test build)</td>
             </tr>
             <tr>
               <td>Memory</td>

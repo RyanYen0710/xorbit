@@ -26,6 +26,14 @@ You need an **Apple Developer Program** membership (paid) and a **Developer ID A
 
 Unsigned builds are signed by `apps/browser/scripts/sign-app.cjs` with a local, self-made code-signing identity kept in `.tools/signing/` (NOT in the repo; back up `id.p12` and `keychain-password.txt`, because losing it makes macOS ask for Keychain permission again after the next update). Without it the script falls back to a plain ad-hoc signature. Both are sealed signatures (without it macOS calls a downloaded copy "damaged"). Gatekeeper still asks users to confirm once (System Settings → Privacy & Security → Open Anyway); the download page explains it. Only a paid Developer ID + notarization removes that prompt.
 
+## Windows installer (early test build)
+
+Built on GitHub's free Windows machines by `.github/workflows/windows.yml` (Actions -> "Windows installer" -> Run workflow -> the tag
+of the release it should join, e.g. `v0.1.8`). It attaches `X-Orbit-Setup-<version>-x64.exe` and `latest.yml` to that **existing**
+release, so the Mac files, the Download page and the Mac updater keep working from the same release. It needs the repository secret
+`FIREBASE_DESKTOP_KEY` (the app's sign-in key). Run it again for every new release, or Windows users will not see updates.
+The installer is unsigned: Windows SmartScreen shows "Windows protected your PC" (More info -> Run anyway).
+
 ## Windows signing
 
 Buy a code-signing certificate (OV, or EV for instant SmartScreen reputation) or use Azure Trusted Signing.
