@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { applyTheme } from '@orbit/themes'
 import type { UIState } from '@orbit/types'
 
@@ -54,3 +54,38 @@ export const kbdLabel = (k: string | undefined, mac: boolean) =>
     .replace('Shift', mac ? '⇧' : 'Shift')
     .replace('Alt', mac ? '⌥' : 'Alt')
     .replace(/\+/g, mac ? '' : '+')
+
+/** Folders the person has opened (or closed), remembered in this app's own storage. */
+export function useFolderMemory(key: string): [Set<string>, (folder: string) => void] {
+  const [set, setSet] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem(key) ?? '[]'))
+    } catch {
+      return new Set<string>()
+    }
+  })
+  const toggle = (folder: string) =>
+    setSet((cur) => {
+      const next = new Set(cur)
+      if (!next.delete(folder)) next.add(folder)
+      try {
+        localStorage.setItem(key, JSON.stringify([...next]))
+      } catch {
+        /* storage unavailable: it still works for this session */
+      }
+      return next
+    })
+  return [set, toggle]
+}
+
+/** Groups pins by folder, keeping the order folders first appear in; pins without a folder come first. */
+export function groupByFolder<T extends { folder: string }>(items: T[]): [string, T[]][] {
+  const m = new Map<string, T[]>()
+  m.set('', [])
+  for (const it of items) {
+    const k = (it.folder ?? '').trim()
+    if (!m.has(k)) m.set(k, [])
+    m.get(k)!.push(it)
+  }
+  return [...m].filter(([, v]) => v.length)
+}

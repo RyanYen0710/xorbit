@@ -5,6 +5,14 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.7',
+    channel: 'Beta',
+    items: [
+      'Bookmark folders: imported bookmarks keep their Chrome folders (like Work / Docs), the Pins page groups them into folders you can open and close, and the sidebar shows pinned bookmark folders the same way.',
+      'The Import from file button now matches the theme.',
+    ],
+  },
+  {
     v: '0.1.6',
     channel: 'Beta',
     items: [

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Icon } from '../icons'
-import { act, hostOf, useOrbit } from '../state'
+import { act, groupByFolder, hostOf, useFolderMemory, useOrbit } from '../state'
 import { Empty, Page } from './shared'
 
 export default function Pins() {
   const s = useOrbit()!
+  const [closed, toggle] = useFolderMemory('orbit.pins.closedFolders')
   const [msg, setMsg] = useState('')
   return (
     <Page index="04" label="PINS" title="Pins">
@@ -19,7 +20,10 @@ export default function Pins() {
         <button className="btn ghost" onClick={async () => setMsg(await act('importPins'))}>
           Import JSON
         </button>
-        <button className="btn" onClick={async () => setMsg(await act('importBookmarksFile'))}>
+        <button
+          className="btn ghost accent"
+          onClick={async () => setMsg(await act('importBookmarksFile'))}
+        >
           Import from file…
         </button>
         {(['chrome', 'edge', 'brave'] as const).map((b) => (
@@ -48,59 +52,85 @@ export default function Pins() {
             <div className="orbit-label hist-label">
               <span style={{ color: sp.color }}>●</span> {sp.name}
             </div>
-            {pins.map((p) => (
-              <div
-                className="hist-row"
-                key={p.id}
-                draggable
-                onDragStart={(e) => e.dataTransfer.setData('text/pin', p.id)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  const id = e.dataTransfer.getData('text/pin')
-                  if (id) void act('movePin', { id, beforeId: p.id })
-                }}
-              >
-                <span className="hist-time">
-                  {p.favicon && <img src={p.favicon} alt="" width={14} height={14} />}
-                </span>
-                <a
-                  href="#"
-                  className="hist-title"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    void act('navigate', { url: p.url, newTab: true })
-                  }}
-                >
-                  {p.title}
-                </a>
-                <span className="hist-host">{hostOf(p.url)}</span>
-                <button
-                  className="icon-btn"
-                  aria-pressed={p.favorite !== false}
-                  aria-label={`${p.favorite !== false ? 'Unpin from' : 'Pin to'} sidebar: ${p.title}`}
-                  title={p.favorite !== false ? 'Pinned to the sidebar' : 'Pin to the sidebar'}
-                  onClick={() => act('favoritePin', { id: p.id })}
-                  style={{ color: p.favorite !== false ? 'var(--orbit-accent)' : undefined }}
-                >
-                  <Icon n="pin" size={14} />
-                </button>
-                <input
-                  className="field folder"
-                  placeholder="Folder"
-                  aria-label={`Folder for ${p.title}`}
-                  defaultValue={p.folder}
-                  onBlur={(e) =>
-                    e.target.value !== p.folder &&
-                    act('updatePin', { id: p.id, folder: e.target.value })
-                  }
-                />
-                <button
-                  className="icon-btn"
-                  aria-label={`Unpin ${p.title}`}
-                  onClick={() => act('unpin', { id: p.id })}
-                >
-                  <Icon n="close" size={14} />
-                </button>
+            {groupByFolder(pins).map(([folder, items]) => (
+              <div key={folder} className="pin-folder">
+                {folder !== '' && (
+                  <button
+                    className="folder-head"
+                    aria-expanded={!closed.has(sp.id + '|' + folder)}
+                    onClick={() => toggle(sp.id + '|' + folder)}
+                  >
+                    <span className="folder-chev" data-open={!closed.has(sp.id + '|' + folder)}>
+                      <Icon n="chevron" size={14} />
+                    </span>
+                    <Icon n="folder" size={14} />
+                    <span className="folder-name">{folder}</span>
+                    <span className="folder-count">{items.length}</span>
+                  </button>
+                )}
+                {(folder === '' || !closed.has(sp.id + '|' + folder)) && (
+                  <div className={folder === '' ? '' : 'folder-body'}>
+                    {items.map((p) => (
+                      <div
+                        className="hist-row"
+                        key={p.id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('text/pin', p.id)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          const id = e.dataTransfer.getData('text/pin')
+                          if (id) void act('movePin', { id, beforeId: p.id })
+                        }}
+                      >
+                        <span className="hist-time">
+                          {p.favicon && <img src={p.favicon} alt="" width={14} height={14} />}
+                        </span>
+                        <a
+                          href="#"
+                          className="hist-title"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            void act('navigate', { url: p.url, newTab: true })
+                          }}
+                        >
+                          {p.title}
+                        </a>
+                        <span className="hist-host">{hostOf(p.url)}</span>
+                        <button
+                          className="icon-btn"
+                          aria-pressed={p.favorite !== false}
+                          aria-label={`${p.favorite !== false ? 'Unpin from' : 'Pin to'} sidebar: ${p.title}`}
+                          title={
+                            p.favorite !== false ? 'Pinned to the sidebar' : 'Pin to the sidebar'
+                          }
+                          onClick={() => act('favoritePin', { id: p.id })}
+                          style={{
+                            color: p.favorite !== false ? 'var(--orbit-accent)' : undefined,
+                          }}
+                        >
+                          <Icon n="pin" size={14} />
+                        </button>
+                        <input
+                          className="field folder"
+                          placeholder="Folder"
+                          aria-label={`Folder for ${p.title}`}
+                          defaultValue={p.folder}
+                          onBlur={(e) =>
+                            e.target.value !== p.folder &&
+                            act('updatePin', { id: p.id, folder: e.target.value })
+                          }
+                        />
+                        <button
+                          className="icon-btn"
+                          aria-label={`Unpin ${p.title}`}
+                          onClick={() => act('unpin', { id: p.id })}
+                        >
+                          <Icon n="close" size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </section>

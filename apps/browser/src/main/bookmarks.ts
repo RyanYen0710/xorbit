@@ -64,34 +64,40 @@ function bookmarkFiles(id: string): string[] {
 }
 
 const MAX_FILE = 20_000_000
-type Walker = (n: any, folder: string) => void
-function collector(items: ImportedBookmark[], seen: Set<string>): Walker {
-  const walk: Walker = (n, folder) => {
+const FOLDER_MAX = 80
+const join = (path: string, name: unknown) =>
+  [path, String(name ?? '').trim()].filter(Boolean).join(' / ').slice(0, FOLDER_MAX)
+/** Walks Chrome's JSON tree and keeps every bookmark's full folder path ("Work / Docs"). */
+function collector(items: ImportedBookmark[], seen: Set<string>) {
+  const walk = (n: any, path: string) => {
     if (items.length >= 5000 || !n) return
-    if (n.type === 'url' && typeof n.url === 'string' && /^https?:\/\//.test(n.url)) {
-      if (seen.has(n.url)) return
+    if (n.type === 'url') {
+      if (typeof n.url !== 'string' || !/^https?:\/\//.test(n.url) || seen.has(n.url)) return
       seen.add(n.url)
-      items.push({ title: String(n.name || n.url).slice(0, 200), url: n.url, folder })
-    } else for (const c of n.children ?? []) walk(c, folder)
+      items.push({ title: String(n.name || n.url).slice(0, 200), url: n.url, folder: path })
+    } else
+      for (const c of n.children ?? []) walk(c, c?.type === 'folder' ? join(path, c.name) : path)
   }
-  return walk
+  // "Bookmarks bar" is the top level, so its folders show up directly; the other roots keep their own name
+  return (json: any) => {
+    for (const [key, root] of Object.entries<any>(json?.roots ?? {}))
+      if (root && typeof root === 'object' && Array.isArray(root.children))
+        walk(root, key === 'bookmark_bar' ? '' : join('', root.name))
+  }
 }
 
 export function readBookmarks(id: string): { label: string; items: ImportedBookmark[] } | null {
   const items: ImportedBookmark[] = []
-  const walk = collector(items, new Set())
+  const add = collector(items, new Set())
   let found = false
   for (const file of bookmarkFiles(id)) {
-    let json: any
     try {
       if (fs.statSync(file).size > MAX_FILE) continue
-      json = JSON.parse(fs.readFileSync(file, 'utf8'))
+      add(JSON.parse(fs.readFileSync(file, 'utf8')))
+      found = true
     } catch {
       continue
     }
-    found = true
-    for (const root of Object.values<any>(json.roots ?? {}))
-      if (root && typeof root === 'object') walk(root, String(root.name ?? '').slice(0, 40))
   }
   return found ? { label: BROWSERS[id].label, items } : null
 }
@@ -105,6 +111,14 @@ const decode = (t: string) =>
     .replace(/&#(?:39|x27);/gi, "'")
     .replace(/&#(\d+);/g, (_m, n) => String.fromCharCode(Number(n)))
     .replace(/&amp;/g, '&')
+
+const TOP = /^(bookmarks (bar|toolbar|menu)|favou?rites bar)$/i
+/** "Bookmarks bar" is the top level, so the folder path starts below it. */
+const folderOf = (stack: string[]) => {
+  const names = stack.filter(Boolean)
+  if (names.length && TOP.test(names[0])) names.shift()
+  return names.join(' / ').slice(0, FOLDER_MAX)
+}
 
 /** Reads the HTML bookmarks file every browser can export ("Export bookmarks"). Only http(s) links are kept. */
 export function parseBookmarksHtml(html: string): ImportedBookmark[] {
@@ -128,7 +142,7 @@ export function parseBookmarksHtml(html: string): ImportedBookmark[] {
       items.push({
         title: (decode(m[3]).trim() || url).slice(0, 200),
         url,
-        folder: (stack.find((x) => x) ?? '').slice(0, 40),
+        folder: folderOf(stack),
       })
     }
   }
@@ -142,10 +156,7 @@ export function readBookmarksFile(file: string): ImportedBookmark[] | null {
     const text = fs.readFileSync(file, 'utf8')
     if (text.trimStart().startsWith('{')) {
       const items: ImportedBookmark[] = []
-      const walk = collector(items, new Set())
-      const json = JSON.parse(text)
-      for (const root of Object.values<any>(json.roots ?? {}))
-        if (root && typeof root === 'object') walk(root, String(root.name ?? '').slice(0, 40))
+      collector(items, new Set())(JSON.parse(text))
       return items
     }
     return parseBookmarksHtml(text)

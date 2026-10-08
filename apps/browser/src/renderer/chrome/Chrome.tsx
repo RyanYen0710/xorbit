@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { Logo, Wordmark } from '@orbit/ui'
 import type { Pin, Space, TabInfo, UIState } from '@orbit/types'
 import { Icon } from '../icons'
-import { act, hostOf, useOrbit } from '../state'
+import { act, groupByFolder, useFolderMemory, hostOf, useOrbit } from '../state'
 
 const DAY = 86_400_000
 const DND = 'text/orbit-tab'
@@ -204,6 +204,49 @@ function Section({
   )
 }
 
+/** Pinned bookmarks, grouped into folders that open and close (remembered). Pins without a folder are listed first. */
+function PinnedList({ pins, expanded }: { pins: Pin[]; expanded: boolean }) {
+  const [open, toggle] = useFolderMemory('orbit.rail.openFolders')
+  return (
+    <>
+      {groupByFolder(pins).map(([folder, items]) =>
+        folder === '' ? (
+          items.map((p) => <PinRow key={p.id} p={p} expanded={expanded} />)
+        ) : (
+          <div key={folder} className="folder">
+            <button
+              className="tab folder-row"
+              aria-expanded={open.has(folder)}
+              title={`${folder} (${items.length})`}
+              onClick={() => toggle(folder)}
+            >
+              <span className="fav fav-letter folder-ico">
+                <Icon n="folder" size={14} />
+              </span>
+              {expanded && (
+                <>
+                  <span className="tab-title">{folder.split(' / ').pop()}</span>
+                  <span className="folder-count">{items.length}</span>
+                  <span className="folder-chev" data-open={open.has(folder)}>
+                    <Icon n="chevron" size={13} />
+                  </span>
+                </>
+              )}
+            </button>
+            {open.has(folder) && (
+              <div className="folder-items" data-nested={expanded}>
+                {items.map((p) => (
+                  <PinRow key={p.id} p={p} expanded={expanded} />
+                ))}
+              </div>
+            )}
+          </div>
+        ),
+      )}
+    </>
+  )
+}
+
 function Rail({ s }: { s: UIState }) {
   const ex = s.railExpanded
   const mac = s.platform === 'darwin'
@@ -269,9 +312,7 @@ function Rail({ s }: { s: UIState }) {
       >
         {pins.length > 0 && (
           <Section label="PINNED" expanded={ex}>
-            {pins.map((p) => (
-              <PinRow key={p.id} p={p} expanded={ex} />
-            ))}
+            <PinnedList pins={pins} expanded={ex} />
           </Section>
         )}
         <Section label="TODAY" expanded={ex}>

@@ -292,7 +292,7 @@ try {
     assert.match(await act('importBookmarksFile'), /Imported 2 bookmarks from the file/)
     const pins = (await state()).pins
     assert.equal(pins.find((p) => p.url === 'https://html-a.example/?x=1&y=2')?.title, 'Alpha & Co')
-    assert.equal(pins.find((p) => p.url === 'https://html-b.example/')?.folder, 'Bookmarks bar')
+    assert.equal(pins.find((p) => p.url === 'https://html-b.example/')?.folder, 'Sub') // "Bookmarks bar" is the top level
     assert.ok(!pins.some((p) => p.url.startsWith('javascript:')))
     assert.match(await act('importBookmarksFile'), /No new bookmarks/)
     const json = path.join(tmp, 'AccountBookmarks')
@@ -314,6 +314,58 @@ try {
     fs.writeFileSync(junk, 'hello')
     await W(`process.env.ORBIT_PICK_FILE = arg; return 1`, junk)
     assert.match(await act('importBookmarksFile'), /no bookmarks/)
+    // Chrome's folders are kept as paths (Work / Docs), the bookmarks bar is the top level, other roots keep their name
+    const nested = path.join(tmp, 'Bookmarks-nested')
+    const u = (n) => ({ type: 'url', name: n, url: `https://nested-${n}.example/` })
+    fs.writeFileSync(
+      nested,
+      JSON.stringify({
+        roots: {
+          bookmark_bar: {
+            name: 'Bookmarks bar',
+            type: 'folder',
+            children: [
+              u('top'),
+              {
+                type: 'folder',
+                name: 'Work',
+                children: [u('w1'), { type: 'folder', name: 'Docs', children: [u('d1')] }],
+              },
+            ],
+          },
+          other: { name: 'Other bookmarks', type: 'folder', children: [u('o1')] },
+          sync_transaction_version: '1',
+        },
+      }),
+    )
+    await W(`process.env.ORBIT_PICK_FILE = arg; return 1`, nested)
+    assert.match(await act('importBookmarksFile'), /Imported 4 bookmarks/)
+    const byUrl = (x) => (pinsNow) => pinsNow.find((p) => p.url === `https://nested-${x}.example/`)
+    const now = (await state()).pins
+    assert.deepEqual(
+      ['top', 'w1', 'd1', 'o1'].map((x) => byUrl(x)(now).folder),
+      ['', 'Work', 'Work / Docs', 'Other bookmarks'],
+    )
+    log('imported bookmarks keep their folders (Work / Docs; bookmarks bar is the top level)')
+    // the sidebar groups pinned bookmarks into folders that open and close
+    for (const x of ['top', 'w1', 'd1']) await act('favoritePin', { id: byUrl(x)(now).id })
+    const rail = (code) => W(`return w.chrome.webContents.executeJavaScript(arg)`, code)
+    await until(
+      () => rail(`document.querySelectorAll('.folder-row').length >= 2`),
+      'folders in the sidebar',
+    )
+    assert.equal(await rail(`document.querySelectorAll('.folder-items .pin').length`), 0) // closed at first
+    await rail(`document.querySelector('.folder-row').click()`)
+    await until(
+      () => rail(`document.querySelectorAll('.folder-items .pin').length === 1`),
+      'folder opens',
+    )
+    await rail(`document.querySelector('.folder-row').click()`)
+    await until(
+      () => rail(`document.querySelectorAll('.folder-items .pin').length === 0`),
+      'folder closes',
+    )
+    log('the sidebar shows bookmark folders that open and close')
     await W(`process.env.ORBIT_PICK_FILE = ''; return 1`)
     log(
       '"Import from file" reads exported .html and Chrome JSON files (entities decoded, folders kept, unsafe links skipped)',
@@ -364,7 +416,7 @@ try {
   // a genuine mouse click into the box (script-driven focus is deliberately ignored by the page script)
   const r = JSON.parse(await page(`JSON.stringify(u.getBoundingClientRect())`))
   await W(
-    `const wc = w.activeTab.view.webContents; wc.focus(); const x = Math.round(arg.x + arg.width / 2), y = Math.round(arg.y + arg.height / 2);
+    `w.win.show(); w.win.focus(); const wc = w.activeTab.view.webContents; wc.focus(); const x = Math.round(arg.x + arg.width / 2), y = Math.round(arg.y + arg.height / 2);
      wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 }); wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 }); return 1`,
     r,
   )
