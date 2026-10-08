@@ -15,10 +15,12 @@ import { passwordProblems } from '../shared/password'
 import { broadcast } from './registry'
 import { protection } from './vault'
 
-// Public identifier of the Firebase project (not a secret; access is enforced by Firebase and its rules).
-const API_KEY = 'AIzaSyA5KXBEVA6dgIqWm_9m7hMr1U_gI4FN45A'
+// The desktop app's own Firebase API key, baked in at build time from MAIN_VITE_FIREBASE_KEY (a git-ignored .env.local, or a
+// CI secret). It is limited in Google Cloud to Identity Toolkit + Token Service, so it can only sign people in. It is not in
+// the repo, so GitHub's secret scanner never sees it; the web key (referrer-restricted) is the one the websites use.
 const PROD_SITE = 'https://xorbit-browse.vercel.app'
 const EMU = process.env.ORBIT_TEST ? process.env.ORBIT_AUTH_EMULATOR : undefined // tests only
+const API_KEY: string = EMU ? 'demo-key' : (import.meta.env.MAIN_VITE_FIREBASE_KEY ?? '')
 const IDT = EMU
   ? `http://${EMU}/identitytoolkit.googleapis.com/v1`
   : 'https://identitytoolkit.googleapis.com/v1'
@@ -72,6 +74,10 @@ const friendly = (e: unknown) =>
       : 'Something went wrong. Please try again.'
 
 async function call(url: string, body: unknown, form = false): Promise<any> {
+  if (!API_KEY)
+    throw new AccountError(
+      'This build of X Orbit has no account key. Download the latest version from the website.',
+    )
   const r = await net.fetch(url, {
     method: 'POST',
     headers: { 'content-type': form ? 'application/x-www-form-urlencoded' : 'application/json' },

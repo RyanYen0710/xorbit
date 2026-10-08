@@ -17,12 +17,16 @@ jobs:
         with: { node-version: 24, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @orbit/browser build
+        env:
+          MAIN_VITE_FIREBASE_KEY: ${{ secrets.FIREBASE_DESKTOP_KEY }}
       - name: Package and publish
         working-directory: apps/browser
         run: pnpm exec electron-builder --config electron-builder.config.cjs --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORBIT_GH_OWNER: ${{ github.repository_owner }}
+          # the desktop app's sign-in key (Identity Toolkit + Token Service only); a repository secret, not in the repo
+          MAIN_VITE_FIREBASE_KEY: ${{ secrets.FIREBASE_DESKTOP_KEY }}
           ORBIT_GH_REPO: ${{ github.event.repository.name }}
           # macOS signing + notarization (optional)
           CSC_LINK: ${{ secrets.CSC_LINK }}

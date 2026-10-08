@@ -5,6 +5,15 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.4',
+    channel: 'Beta',
+    items: [
+      'X Orbit account in the app (Settings → Account): create an account with email and password, or continue with Google through your normal browser, and link Google to an email account. Same security as the website: strong passwords, email confirmation, server-side checks.',
+      'When Google refuses sign-in inside X Orbit, a dialog offers to open the page in Chrome or use your X Orbit account.',
+      'Stricter security policy for X Orbit’s own pages, and a nonce-based policy on the website.',
+    ],
+  },
+  {
     v: '0.1.3',
     channel: 'Beta',
     items: [

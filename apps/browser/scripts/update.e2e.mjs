@@ -20,10 +20,10 @@ const plist = (app, k) =>
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const version = plist(SRC, 'CFBundleShortVersionString')
 
-// ── a fake newer release (0.9.9): same app, new version number, re-signed, zipped ──
+// ── a pretend newer release (the next patch number, e.g. 0.1.4 -> 0.1.5): same app, re-signed, zipped ──
 const feedDir = path.join(tmp, 'feed')
 fs.mkdirSync(feedDir)
-const NEW = '9.9.9'
+const NEW = version.replace(/\d+$/, (n) => String(Number(n) + 1))
 const stage = path.join(tmp, 'stage')
 fs.mkdirSync(stage)
 sh('/usr/bin/ditto', [SRC, `${stage}/X Orbit.app`])
@@ -108,7 +108,7 @@ try {
   const text = await app.W(
     `return w.overlay.webContents.executeJavaScript("document.querySelector('.upd').innerText")`,
   )
-  assert.match(text, /Updating X Orbit to 9\.9\.9/)
+  assert.match(text, new RegExp(`Updating X Orbit to ${NEW.replaceAll('.', '\\.')}`))
   assert.match(text, /\d+(\.\d)? MB\/s/)
   assert.match(text, /\d+\.\d MB \/ \d+\.\d MB/)
   const png = await app.W(
