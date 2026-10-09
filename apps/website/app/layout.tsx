@@ -2,15 +2,27 @@ import type { Metadata, Viewport } from 'next'
 import { headers } from 'next/headers'
 import './globals.css'
 import { Footer, Header } from '@/components/Shell'
-import { SITE_URL } from '@/lib/site'
+import { GOOGLE_SITE_VERIFICATION, SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: 'X Orbit — The web, reorbited.', template: '%s — X Orbit' },
+  title: { default: 'X Orbit Browser — The web, reorbited.', template: '%s — X Orbit Browser' },
   description:
-    'X Orbit is a desktop browser built around Spaces, a vertical Orbit Rail and a bottom Orbit Bar instead of a crowded toolbar.',
+    'X Orbit (also written Xorbit) is a free desktop web browser for Mac and Windows built around Spaces, vertical tabs, a bookmarks sidebar and a bottom Orbit Bar instead of a crowded toolbar.',
+  applicationName: 'X Orbit',
+  keywords: [
+    'X Orbit',
+    'Xorbit',
+    'X Orbit browser',
+    'Xorbit browser',
+    'vertical tabs browser',
+    'Mac browser',
+  ],
+  alternates: { canonical: '/' },
+  ...(GOOGLE_SITE_VERIFICATION ? { verification: { google: GOOGLE_SITE_VERIFICATION } } : {}),
   openGraph: {
-    title: 'X Orbit — The web, reorbited.',
+    siteName: 'X Orbit',
+    title: 'X Orbit Browser — The web, reorbited.',
     description: 'A browser designed around your space, not your tabs.',
     type: 'website',
     images: ['/shots/newtab.png'],

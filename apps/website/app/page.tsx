@@ -4,9 +4,21 @@ import { Reviews } from '@/components/Reviews'
 import { ThemeGrid } from '@/components/ThemeGrid'
 import { CHANNEL, VERSION } from '@/lib/site'
 
+const APP_JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'X Orbit',
+  alternateName: ['Xorbit', 'X Orbit Browser'],
+  applicationCategory: 'BrowserApplication',
+  operatingSystem: 'macOS, Windows',
+  description: 'A desktop web browser built around Spaces, vertical tabs and a bottom Orbit Bar.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+}).replace(/</g, '\\u003c')
+
 export default function Home() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: APP_JSON_LD }} />
       <section className="hero">
         <div className="container">
           <div className="label">X ORBIT · DESKTOP BROWSER</div>

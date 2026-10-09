@@ -1,5 +1,7 @@
 export const VERSION = '0.1.10'
 export const CHANNEL = 'BETA'
+/** Google Search Console "HTML tag" verification token (only the content value). Empty = not set. */
+export const GOOGLE_SITE_VERIFICATION = ''
 // NEXT_PUBLIC_SITE_URL wins; on Vercel fall back to its production URL; locally use localhost.
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
