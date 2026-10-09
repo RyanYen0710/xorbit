@@ -1,7 +1,7 @@
 {
   "name": "@orbit/browser",
   "productName": "X Orbit",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "X Orbit \u2014 the web, reorbited.",
   "private": true,
   "main": "out/main/index.js",
@@ -14,6 +14,7 @@
     "icons": "electron scripts/make-icons.cjs",
     "smoke": "node scripts/smoke.mjs",
     "package": "pnpm build && electron-builder --config electron-builder.config.cjs",
+    "package:test": "pnpm build && ORBIT_TEST_BUILD=1 electron-builder --config electron-builder.config.cjs --dir --mac --arm64 --config.directories.output=release-test.noindex",
     "package:dir": "pnpm build && electron-builder --config electron-builder.config.cjs --dir"
   },
   "dependencies": {

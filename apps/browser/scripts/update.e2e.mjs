@@ -1,6 +1,6 @@
 // Tests the self-updater against a REAL packaged copy of the app: a throttled local "release server" offers a newer
 // version, the app downloads it with progress and speed, verifies it, swaps itself and reopens as the new version.
-// Needs a packaged build first (apps/browser/release.noindex/mac-arm64/X Orbit.app). Run: node scripts/update.e2e.mjs
+// Needs a packaged TEST build first: pnpm package:test (apps/browser/release-test.noindex/mac-arm64/X Orbit.app). Run: node scripts/update.e2e.mjs
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,7 +9,8 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { launch, until } from './harness.mjs'
 
-const SRC = path.resolve('release.noindex/mac-arm64/X Orbit.app')
+// the test build keeps the debugger switch that shipped builds have turned off (see electron-builder.config.cjs)
+const SRC = path.resolve(process.env.ORBIT_E2E_APP ?? 'release-test.noindex/mac-arm64/X Orbit.app')
 assert.ok(fs.existsSync(SRC), 'build a packaged app first')
 fs.mkdirSync('.tmp', { recursive: true })
 const tmp = fs.mkdtempSync(path.resolve('.tmp/upd-'))

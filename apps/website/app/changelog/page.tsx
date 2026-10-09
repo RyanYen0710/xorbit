@@ -5,6 +5,13 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.9',
+    channel: 'Beta',
+    items: [
+      'Security hardening: the app can no longer be driven by a debugger or used as a script runner, and the Mac app refuses to start if its files have been tampered with.',
+    ],
+  },
+  {
     v: '0.1.8',
     channel: 'Beta',
     items: [

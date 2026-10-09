@@ -11,6 +11,17 @@ module.exports = {
   directories: { output: 'release.noindex', buildResources: 'resources' },
   files: ['out/**/*', 'package.json'],
   asar: true,
+  // Electron "fuses": switches burned into the app so a local attacker cannot turn it into a general-purpose tool.
+  // Off by default in Electron, so we turn them off/on here. (Tests attach a debugger to a packaged copy, so the
+  // test build, made with ORBIT_TEST_BUILD=1, is the only one that keeps the inspector; shipped builds never do.)
+  electronFuses: {
+    runAsNode: false, // ELECTRON_RUN_AS_NODE=1 could run any script with this app's identity
+    enableNodeOptionsEnvironmentVariable: false, // NODE_OPTIONS could inject code
+    enableNodeCliInspectArguments: process.env.ORBIT_TEST_BUILD === '1', // --inspect would hand over control
+    enableEmbeddedAsarIntegrityValidation: process.platform === 'darwin', // the Mac app refuses to start if its code was changed on disk (Windows once it has been tested there)
+    onlyLoadAppFromAsar: true, // only the signed bundle's own code runs
+    grantFileProtocolExtraPrivileges: false, // file:// pages get no extra powers (X Orbit pages use orbit://)
+  },
   afterSign: 'scripts/sign-app.cjs',
   // Only publish/auto-update from GitHub when a repo is configured.
   ...(owner && repo ? { publish: [{ provider: 'github', owner, repo }] } : { publish: null }),

@@ -10,6 +10,7 @@
 .tools/
 apps/browser/release
 apps/browser/release.noindex
+apps/browser/release-test.noindex
 dist
 firestore-debug.log
 node_modules

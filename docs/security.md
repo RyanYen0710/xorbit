@@ -64,6 +64,11 @@ the `main` branch (no force-push or deletion), and keep signing certificates out
 | No account discovery                                         | wrong email and wrong password give the same message; password reset always answers "if an account exists"                                                                                                                                | live checks                                                                                                 |
 | Google sign-in in the app                                    | never inside X Orbit (Google refuses embedded sign-in). The system browser signs in at `/app-sign-in`; only a short-lived Google ID token returns, to a one-shot server on 127.0.0.1 that checks a random secret, the Host and the Origin | `account.e2e.mjs` attack cases                                                                              |
 
+**Packaged app hardening.** The shipped app has Electron's "fuses" set: it cannot be used as a script runner
+(`ELECTRON_RUN_AS_NODE`), `NODE_OPTIONS` and `--inspect` are ignored (no debugger can be attached), only the app's own bundle
+is loaded, and on Mac it refuses to start if its code was changed on disk (ASAR integrity). Test builds
+(`pnpm package:test`, `ORBIT_TEST_BUILD=1`) keep the inspector so the updater can be tested end to end.
+
 **API key.** The Firebase web key (`AIza...`) is an identifier, not a secret: it is meant to be in browser code, and
 access is decided by Auth and the rules. Still, restrict it in Google Cloud: HTTP referrers = the three site origins and
 APIs = Identity Toolkit, Token Service, Cloud Firestore; give the desktop app its own key limited to Identity Toolkit and
