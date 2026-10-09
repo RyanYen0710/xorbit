@@ -5,6 +5,13 @@ export const metadata: Metadata = { title: 'Changelog' }
 
 const ENTRIES = [
   {
+    v: '0.1.10',
+    channel: 'Beta',
+    items: [
+      'Fixes Orbit Search: it pointed at a search server on your own computer that nobody runs, so it never worked. It now uses X Orbit’s own page, which forwards your search to Google. Existing installs switch over automatically.',
+    ],
+  },
+  {
     v: '0.1.9',
     channel: 'Beta',
     items: [

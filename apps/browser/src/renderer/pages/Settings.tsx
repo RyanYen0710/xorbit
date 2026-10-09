@@ -312,7 +312,7 @@ export default function Settings() {
         </Row>
         <Row
           label="Orbit Search URL"
-          hint="Where Orbit Search is served. Run it locally with pnpm dev:search. Orbit Search shows results only when a search API is configured, otherwise it forwards to Google."
+          hint="Where Orbit Search is served. The default is X Orbit's own page, which forwards your search to Google. Developers can run their own with pnpm dev:search (http://localhost:4400/orbit-search)."
         >
           <input
             className="field"

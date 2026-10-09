@@ -21,7 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homepage: '',
   searchProvider: 'google',
   customSearchUrl: '',
-  orbitSearchUrl: process.env.ORBIT_SEARCH_URL || 'http://localhost:4400/orbit-search',
+  orbitSearchUrl: process.env.ORBIT_SEARCH_URL || 'https://xorbit-browse.vercel.app/orbit-search',
   themeId: 'zero',
   appearance: 'theme',
   archiveAfterHours: 24,
@@ -145,6 +145,12 @@ export function initStore() {
       if (p.home) n++
     }
     d.migrated = 3
+  }
+  // v4: Orbit Search used to default to a server on this computer that nobody runs; it now defaults to the hosted one
+  if ((d.migrated ?? 0) < 4) {
+    if (d.settings.orbitSearchUrl === 'http://localhost:4400/orbit-search')
+      d.settings.orbitSearchUrl = DEFAULT_SETTINGS.orbitSearchUrl
+    d.migrated = 4
   }
   d.folders ??= []
   if (!d.spaces?.length) d.spaces = [DEFAULT_SPACE]

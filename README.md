@@ -103,7 +103,7 @@ Full notes, including what applies once accounts/payments exist: [docs/security.
 Settings → Search chooses the provider for the Orbit Bar and New Tab. **Google is the default**; queries open Google's results page (no scraping, no proxy). **Orbit Search** (`apps/search`) renders results itself when you configure an official API, otherwise it forwards to Google:
 
 1. Easiest: a free [Serper.dev](https://serper.dev/api-keys) key (2,500 queries) → set `SERPER_API_KEY` in `.env` (Google results; Web, Images and News). Alternatives: `BRAVE_SEARCH_API_KEY`, or `GOOGLE_PSE_API_KEY` + `GOOGLE_PSE_CX` (Google's Programmable Search API is closed to new customers and ends 1 Jan 2027). Bing's search API was retired in August 2025, so Bing is available only as a normal results page.
-2. `pnpm dev:search`, then pick _Orbit Search_ in the browser's Settings (default URL `http://localhost:4400/orbit-search`).
+2. `pnpm dev:search`, then pick _Orbit Search_ in the browser's Settings (the default is the hosted page at `https://xorbit-browse.vercel.app/orbit-search`; set the URL in Settings to `http://localhost:4400/orbit-search` to use your local one).
 
 Add a provider: implement `SearchProvider` in `packages/search/src/adapters.ts`, register it in `createProvider`.
 
