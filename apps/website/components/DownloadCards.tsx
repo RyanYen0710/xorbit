@@ -31,7 +31,7 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
       title: 'WINDOWS',
       sub: '64-bit · Windows 10 or 11 · early test build',
       asset: win,
-      missing: 'Coming soon',
+      missing: hasRepo ? 'Not in the latest release' : 'No release published yet',
     },
   ].sort((a) => (a.id === os ? -1 : 1))
   return (
@@ -51,13 +51,13 @@ export function DownloadCards({ mac, macIntel, win, linux, hasRepo }: Props) {
             </a>
           ) : (
             <button className="btn" disabled aria-describedby={`m-${c.id}`}>
-              {c.id === 'win' ? 'COMING SOON' : 'DOWNLOAD'}
+              DOWNLOAD
             </button>
           )}
           {c.asset && c.id === 'win' && (
             <p className="label">TEST BUILD · WINDOWS WILL WARN ABOUT AN UNKNOWN PUBLISHER</p>
           )}
-          {!c.asset && c.id !== 'win' && (
+          {!c.asset && (
             <p className="label" id={`m-${c.id}`}>
               {c.missing}
             </p>

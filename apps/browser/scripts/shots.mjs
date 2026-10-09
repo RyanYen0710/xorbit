@@ -66,6 +66,8 @@ try {
     )
     await app.act('pinPage')
   }
+  // pins on the new tab page are separate from bookmarks now: promote the bookmarks to home pins
+  for (const pin of (await app.state()).pins) await app.act('bookmarkHome', { id: pin.id })
   await app.act('activateTab', { id: newtabId })
   await shot('newtab')
   await app.act('createSpace', { name: 'School' })

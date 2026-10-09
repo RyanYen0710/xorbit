@@ -33,13 +33,18 @@ const ROWS: [string, string, boolean][] = [
   ['Popups and autoplay', 'Popups can be blocked; media autoplay needs a click by default.', true],
   ['Tracker and ad blocking', 'Not implemented yet.', false],
   [
-    'Password manager',
-    'Not implemented. If added, it will use the operating system’s secure credential storage.',
-    false,
+    'Saved logins and cards',
+    'Stored in one encrypted file, locked with the operating system’s secure storage (Keychain on Mac). Card security codes are never saved. Revealing or filling asks for Touch ID where available. There is no master password yet.',
+    true,
   ],
   [
-    'Sync / accounts',
-    'Not implemented. Nothing leaves your computer except the pages you load.',
+    'X Orbit account',
+    'Optional. Sign in with email or Google in Settings → Account. It only identifies you; your browsing data stays on your computer.',
+    true,
+  ],
+  [
+    'Sync across devices',
+    'Not implemented. Nothing leaves your computer except the pages you load, update checks and the optional account sign-in.',
     false,
   ],
 ]
@@ -82,9 +87,9 @@ export default function Privacy() {
         <div className="prose">
           <h3>What is stored, and where</h3>
           <p>
-            History, open tabs, Spaces, pins, settings and download records are stored as files in
-            your user profile folder on your own computer. They are not encrypted by X Orbit; anyone
-            with access to your account can read them.
+            History, open tabs, Spaces, bookmarks, pins, settings and download records are stored as
+            files in your user profile folder on your own computer. They are not encrypted by X
+            Orbit; anyone with access to your account can read them.
           </p>
           <h3>What leaves your computer</h3>
           <p>

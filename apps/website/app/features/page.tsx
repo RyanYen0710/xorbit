@@ -45,6 +45,22 @@ const FEATURES: [string, string][] = [
     'Tabs, Spaces, the active tab, window size and position come back when you reopen X Orbit.',
   ],
   [
+    'Saved logins and cards',
+    'Offers to save and fill logins and cards. Everything is encrypted with your operating system’s secure storage and never uploaded.',
+  ],
+  [
+    'X Orbit account',
+    'Optional. Create an account with email, or continue with Google through your normal browser. Strong passwords and email confirmation.',
+  ],
+  [
+    'Automatic updates',
+    'Opens, checks, and installs the new version by itself with a progress bar, speed and size. Turn it off in Settings.',
+  ],
+  [
+    'Its own dialogs and menus',
+    'Confirmations, permission prompts and right-click menus are all drawn by X Orbit, not the operating system.',
+  ],
+  [
     'Tab archiving',
     'Inactive tabs archive after 12 hours to 7 days (or never) and idle tabs release memory.',
   ],
@@ -141,10 +157,11 @@ export default function Features() {
       >
         <div className="prose">
           <p>
-            This is a 0.1 beta. Not built yet: extensions, sync across devices, a password manager
-            (when it arrives it will use the OS keychain), tracker and ad blocking, importing
-            bookmarks from other browsers, and more than two pages in Split View. X Orbit is built
-            on Electron and Chromium, so web compatibility is Chromium’s.
+            This is a 0.1 beta. Not built yet: extensions, sync of bookmarks and tabs across devices
+            (including two-way sync with Google or Chrome), tracker and ad blocking, a master
+            password for saved logins, and more than two pages in Split View. The Windows build is
+            an early test build. X Orbit is built on Electron and Chromium, so web compatibility is
+            Chromium’s.
           </p>
         </div>
       </Section>

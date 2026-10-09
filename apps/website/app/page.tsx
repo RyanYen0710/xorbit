@@ -106,8 +106,8 @@ export default function Home() {
         <div className="cols">
           <div className="copy">
             <p>
-              A Space is a workspace with its own tabs, its own pins and its own accent colour.
-              Switch with the Rail or <strong>Ctrl/⌘ + Alt + ←/→</strong>.
+              A Space is a workspace with its own tabs and its own accent colour. Switch with the
+              Rail or <strong>Ctrl/⌘ + Alt + ←/→</strong>.
             </p>
             <p>
               Turn on <strong>separate session</strong> for a Space and its cookies and logins stay
@@ -247,15 +247,15 @@ export default function Home() {
         <div className="cols">
           <div className="copy">
             <p>
-              History, tabs, pins and settings are stored on your computer. This version has no
-              analytics or telemetry code. Controls that exist today: blocking third-party cookies,
-              a JavaScript switch, per-site camera, microphone, location and notification
+              History, tabs, bookmarks, pins and settings are stored on your computer. This version
+              has no analytics or telemetry code. Controls that exist today: blocking third-party
+              cookies, a JavaScript switch, per-site camera, microphone, location and notification
               permissions, clearing history, cache and cookies, and private windows that don’t write
               history.
             </p>
             <p>
-              What it doesn’t do yet: block trackers or ads, sync, or store passwords. We’ll say so
-              on the privacy page rather than imply otherwise.
+              What it doesn’t do yet: block trackers or ads, or sync your browsing between devices.
+              We’ll say so on the privacy page rather than imply otherwise.
             </p>
             <ArrowLink href="/privacy">Read the privacy details</ArrowLink>
           </div>
@@ -274,13 +274,9 @@ export default function Home() {
             <Link className="btn" href="/download">
               macOS
             </Link>
-            <span
-              className="btn"
-              aria-disabled="true"
-              style={{ opacity: 0.45, cursor: 'not-allowed' }}
-            >
-              Windows · Coming soon
-            </span>
+            <Link className="btn" href="/download#windows-install">
+              Windows · Early test build
+            </Link>
             <span className="label">BETA · {VERSION}</span>
           </div>
         </div>
