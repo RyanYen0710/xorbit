@@ -27,7 +27,13 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['/shots/newtab.png'],
   },
-  icons: { icon: '/icon.svg' },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/icon-192.png',
+  },
 }
 export const viewport: Viewport = { themeColor: '#050505', colorScheme: 'dark' }
 
